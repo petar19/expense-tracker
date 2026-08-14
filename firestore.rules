@@ -53,7 +53,10 @@ service cloud.firestore {
         allow create: if isGroupMember()
           && request.resource.data.createdBy == request.auth.uid
           && validPaidBy()
-          && request.resource.data.price is number && request.resource.data.price > 0
+          // != 0 rather than > 0: migrated corrections can be negative (e.g. a
+          // later "-20" message lowering a prior entry) — only exactly-zero is
+          // rejected, matching the parser's own validation.
+          && request.resource.data.price is number && request.resource.data.price != 0
           && (request.resource.data.source != 'migrated' || isSiteAdmin());
         allow update: if isGroupMember() && validPaidBy();
         allow delete: if isGroupMember();
