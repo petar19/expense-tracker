@@ -82,6 +82,8 @@
               <span>{expense.date}</span>
               <span>· paid by {memberName(expense.paidBy)}</span>
               {#if expense.itemCount}<span>· {expense.itemCount} items</span>{/if}
+              {#if expense.subitems.length > 0}<span>· {expense.subitems.length} subitems</span>{/if}
+              {#if expense.location}<span>· 📍 location</span>{/if}
               {#if expense.source === 'migrated'}<span>· migrated</span>{/if}
             </div>
             {#if expense.categories.length > 0}

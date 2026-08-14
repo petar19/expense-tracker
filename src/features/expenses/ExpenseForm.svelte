@@ -4,7 +4,8 @@
   import { addExpense, knownNames, updateExpense } from '../../lib/stores/expenses';
   import { suggestCategories, AUTO_CHECK_THRESHOLD } from '../../lib/utils/categorize';
   import { normalizeText } from '../../lib/utils/normalize';
-  import type { Expense, Group } from '../../lib/types';
+  import MapPicker from '../../lib/components/MapPicker.svelte';
+  import type { Expense, ExpenseLocation, Group, Subitem } from '../../lib/types';
 
   let {
     group,
@@ -21,9 +22,21 @@
   let paidBy = $state(expense?.paidBy ?? $currentUser?.uid ?? '');
   let date = $state(expense?.date ?? today);
   let selectedCategories = $state<string[]>(expense?.categories ?? []);
+  let location = $state<ExpenseLocation | null>(expense?.location ?? null);
+  let showMap = $state(Boolean(expense?.location));
+  let subitems = $state<Subitem[]>(expense?.subitems ?? []);
   let error = $state('');
   let saving = $state(false);
   let categoriesTouched = $state(Boolean(expense));
+
+  let subitemsTotal = $derived(subitems.reduce((sum, s) => sum + s.price * (s.count ?? 1), 0));
+
+  function addSubitem() {
+    subitems = [...subitems, { name: '', price: 0, count: undefined }];
+  }
+  function removeSubitem(index: number) {
+    subitems = subitems.filter((_, i) => i !== index);
+  }
 
   let nameMatches = $derived(
     name.trim().length > 0
@@ -74,8 +87,8 @@
         paidBy,
         categories: selectedCategories,
         date,
-        location: expense?.location ?? null,
-        subitems: expense?.subitems ?? [],
+        location,
+        subitems: subitems.filter((s) => s.name.trim() !== ''),
       };
       if (expense) {
         await updateExpense(group.id, expense.id, data);
@@ -157,6 +170,36 @@
         </button>
       {/each}
     </div>
+  </div>
+
+  <div class="stack">
+    <div class="row" style="justify-content: space-between">
+      <span>Subitems <span class="muted">(optional)</span></span>
+      <button type="button" disabled title="Coming soon — scan a receipt photo to fill these in automatically">
+        📷 Scan receipt
+      </button>
+    </div>
+    {#each subitems as subitem, i (i)}
+      <div class="row">
+        <input placeholder="item name" bind:value={subitem.name} style="flex:1" />
+        <input type="number" step="0.01" min="0" placeholder="price" bind:value={subitem.price} style="width:6em" />
+        <input type="number" min="1" placeholder="count" bind:value={subitem.count} style="width:5em" />
+        <button type="button" onclick={() => removeSubitem(i)}>✕</button>
+      </div>
+    {/each}
+    <button type="button" onclick={addSubitem}>+ Add subitem</button>
+    {#if subitems.length > 0}
+      <p class="muted">Subitems total: {subitemsTotal.toFixed(2)}</p>
+    {/if}
+  </div>
+
+  <div class="stack">
+    {#if showMap}
+      <MapPicker {location} onChange={(loc) => (location = loc)} />
+      <button type="button" onclick={() => { showMap = false; location = null; }}>Remove location</button>
+    {:else}
+      <button type="button" onclick={() => (showMap = true)}>📍 Add location</button>
+    {/if}
   </div>
 
   {#if error}<p class="muted" style="color: var(--danger)">{error}</p>{/if}
