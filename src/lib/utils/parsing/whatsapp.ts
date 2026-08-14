@@ -8,10 +8,21 @@ export interface ParsedLine {
   amount: number;
 }
 
+/** Best-effort partial info extracted from a line that didn't fully parse,
+ * used to prefill the manual-resolve form instead of leaving it blank. */
+export interface ParseHint {
+  date?: string; // ISO yyyy-MM-dd
+  time?: string;
+  spender?: string;
+  place?: string;
+  amount?: number;
+}
+
 export interface FailedLine {
   lineNumber: number;
   raw: string;
   reason: string;
+  hint: ParseHint;
 }
 
 export interface ParseResult {
@@ -27,6 +38,16 @@ const BRACKETED_LINE = /^\[(?<date>\d{2}\.\d{2}\.\d{4})\.,\s(?<time>\d{2}:\d{2}:
 
 // Continuation line, same message as the previous dated line: `dolac, 30+12+12`
 const CONTINUATION_LINE = /^\s*(?<place>.+),\s*(?<amount>[0-9+.]+)\s*$/;
+
+// Header-only versions of the two dated formats, used to salvage a partial
+// date/time/spender (and the text after the colon) from lines whose tail
+// doesn't fit the expected "place, amount" shape.
+const DATED_HEADER = /^(?<date>\d{2}\/\d{2}\/\d{4}),\s(?<time>\d{2}:\d{2})\s-\s(?<spender>[^:]+):\s*(?<rest>.*)$/;
+const BRACKETED_HEADER = /^\[(?<date>\d{2}\.\d{2}\.\d{4})\.,\s(?<time>\d{2}:\d{2}:\d{2})\]\s(?<spender>[^:]+):\s*(?<rest>.*)$/;
+
+// Amount-then-place, the reverse of the usual order — e.g. "201, gorivo Dacia"
+// instead of "gorivo Dacia, 201" (a common phone-typing slip).
+const REVERSED_TAIL = /^\s*(?<amount>\d+(?:[.,]\d+)?)\s*,\s*(?<place>.+)$/;
 
 function toIsoDate(day: string, month: string, year: string): string {
   return `${year}-${month}-${day}`;
@@ -44,6 +65,41 @@ function parseAmount(raw: string): number | null {
   }
   const value = parseFloat(trimmed);
   return Number.isNaN(value) ? null : value;
+}
+
+/** Salvages whatever date/time/spender/place/amount can be read from a line
+ * that failed full parsing, so the review UI can prefill instead of leaving
+ * every field blank. */
+export function extractHint(line: string): ParseHint {
+  const hint: ParseHint = {};
+  const dated = line.match(DATED_HEADER);
+  const bracketed = !dated ? line.match(BRACKETED_HEADER) : null;
+  let rest = line;
+
+  if (dated?.groups) {
+    const [day, month, year] = dated.groups.date.split('/');
+    hint.date = toIsoDate(day, month, year);
+    hint.time = dated.groups.time;
+    hint.spender = dated.groups.spender.trim();
+    rest = dated.groups.rest;
+  } else if (bracketed?.groups) {
+    const [day, month, year] = bracketed.groups.date.split('.');
+    hint.date = toIsoDate(day, month, year);
+    hint.time = bracketed.groups.time;
+    hint.spender = bracketed.groups.spender.trim();
+    rest = bracketed.groups.rest;
+  }
+
+  const reversed = rest.match(REVERSED_TAIL);
+  if (reversed?.groups) {
+    const amount = parseFloat(reversed.groups.amount.replace(',', '.'));
+    if (!Number.isNaN(amount)) {
+      hint.amount = amount;
+      hint.place = reversed.groups.place.trim();
+    }
+  }
+
+  return hint;
 }
 
 export function applyFixes(line: string, fixes: Record<string, string>): string {
@@ -94,13 +150,18 @@ export function parseWhatsAppExport(text: string, fixes: Record<string, string> 
       place = continuation.groups.place.trim();
       amountRaw = continuation.groups.amount;
     } else {
-      failed.push({ lineNumber, raw: originalLine, reason: 'No format matched' });
+      failed.push({ lineNumber, raw: originalLine, reason: 'No format matched', hint: extractHint(line) });
       return;
     }
 
     const amount = amountRaw === null ? null : parseAmount(amountRaw);
     if (amount === null || amount <= 0) {
-      failed.push({ lineNumber, raw: originalLine, reason: 'Could not parse a positive amount' });
+      failed.push({
+        lineNumber,
+        raw: originalLine,
+        reason: 'Could not parse a positive amount',
+        hint: extractHint(line),
+      });
       return;
     }
 

@@ -33,7 +33,12 @@
 
   $effect(() => {
     for (const line of failed) {
-      manualResolveDrafts[line.lineNumber] ??= { date: '', spender: '', place: '', amount: '' };
+      manualResolveDrafts[line.lineNumber] ??= {
+        date: line.hint.date ?? '',
+        spender: line.hint.spender ?? '',
+        place: line.hint.place ?? '',
+        amount: line.hint.amount !== undefined ? String(line.hint.amount) : '',
+      };
     }
   });
 

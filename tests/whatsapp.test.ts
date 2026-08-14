@@ -37,4 +37,33 @@ describe('parseWhatsAppExport', () => {
     expect(parsed).toEqual([]);
     expect(failed).toHaveLength(1);
   });
+
+  it('salvages date/spender and detects reversed amount-then-place for the manual review form', () => {
+    const text = '14/12/2020, 17:39 - Tata: 201, gorivo Dacia';
+    const { parsed, failed } = parseWhatsAppExport(text);
+    expect(parsed).toEqual([]);
+    expect(failed).toHaveLength(1);
+    expect(failed[0].hint).toMatchObject({
+      date: '2020-12-14',
+      time: '17:39',
+      spender: 'Tata',
+      place: 'gorivo Dacia',
+      amount: 201,
+    });
+  });
+
+  it('prefills date/spender but leaves place/amount blank when a real message has no amount', () => {
+    const text = '27/10/2020, 14:43 - Tata: thanks!';
+    const { failed } = parseWhatsAppExport(text);
+    expect(failed[0].hint.date).toBe('2020-10-27');
+    expect(failed[0].hint.spender).toBe('Tata');
+    expect(failed[0].hint.place).toBeUndefined();
+    expect(failed[0].hint.amount).toBeUndefined();
+  });
+
+  it('leaves the hint fully empty for system messages with no sender-colon structure', () => {
+    const text = '24/10/2020, 17:39 - Luka created group "Financije"';
+    const { failed } = parseWhatsAppExport(text);
+    expect(failed[0].hint).toEqual({});
+  });
 });
