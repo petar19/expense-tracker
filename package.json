@@ -1,0 +1,32 @@
+{
+  "name": "expense-tracker",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.2.0",
+    "@tsconfig/svelte": "^5.0.8",
+    "@types/leaflet": "^1.9.22",
+    "@types/node": "^24.13.3",
+    "svelte": "^5.56.8",
+    "svelte-check": "^4.7.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1",
+    "date-fns": "^4.4.0",
+    "fastest-levenshtein": "^1.0.16",
+    "firebase": "^12.17.1",
+    "leaflet": "^1.9.4",
+    "svelte-spa-router": "^5.1.1",
+    "zod": "^4.4.3"
+  }
+}
