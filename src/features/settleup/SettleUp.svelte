@@ -3,6 +3,7 @@
   import { expenses } from '../../lib/stores/expenses';
   import { filterExpenses } from '../../lib/utils/stats';
   import { computeBalances, simplifyDebts } from '../../lib/utils/debt';
+  import MonthPicker from '../../lib/components/MonthPicker.svelte';
 
   let from = $state('');
   let to = $state('');
@@ -39,9 +40,12 @@
   {#if !$activeGroup}
     <p class="muted">Pick an active group first.</p>
   {:else}
-    <div class="card row">
-      <label>From <input type="date" bind:value={from} /></label>
-      <label>To <input type="date" bind:value={to} /></label>
+    <div class="card stack">
+      <MonthPicker onSelect={(f, t) => { from = f; to = t; }} />
+      <div class="row">
+        <label>From <input type="date" bind:value={from} /></label>
+        <label>To <input type="date" bind:value={to} /></label>
+      </div>
     </div>
 
     <div class="card stack">

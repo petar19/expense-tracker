@@ -4,6 +4,7 @@
   import { categories } from '../../lib/stores/categories';
   import { nameAliases, saveAlias } from '../../lib/stores/nameAliases';
   import ChartView from '../../lib/components/ChartView.svelte';
+  import MonthPicker from '../../lib/components/MonthPicker.svelte';
   import {
     aggregateByCategory,
     aggregateByName,
@@ -100,6 +101,7 @@
     <p class="muted">Pick an active group first.</p>
   {:else}
     <div class="card stack">
+      <MonthPicker onSelect={(f, t) => { from = f; to = t; }} />
       <div class="row">
         <label>From <input type="date" bind:value={from} /></label>
         <label>To <input type="date" bind:value={to} /></label>
