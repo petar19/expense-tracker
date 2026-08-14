@@ -28,7 +28,10 @@ service cloud.firestore {
     }
 
     match /groups/{groupId} {
-      function isMember() { return isAllowed() && request.auth.uid in resource.data.members; }
+      // Checks memberUids (not the members map) so this matches the array-contains
+      // query the app uses to list "my groups" — Firestore can only verify a query
+      // is rule-safe when the rule reads the same field the query filters on.
+      function isMember() { return isAllowed() && request.auth.uid in resource.data.memberUids; }
       function isGroupAdmin() { return isAllowed() && resource.data.members[request.auth.uid].role == 'admin'; }
 
       allow read: if isMember();

@@ -60,7 +60,8 @@ currentUser.subscribe((user) => {
       myGroups.set(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Group, 'id'>) })));
       myGroupsLoading.set(false);
     },
-    () => {
+    (err) => {
+      console.error('Failed to load groups:', err);
       myGroups.set([]);
       myGroupsLoading.set(false);
     },
