@@ -66,4 +66,38 @@ describe('parseWhatsAppExport', () => {
     const { failed } = parseWhatsAppExport(text);
     expect(failed[0].hint).toEqual({});
   });
+
+  it('allows a negative amount as a downward correction', () => {
+    const text = '05/11/2020, 10:00 - Tata: Kruh, -20';
+    const { parsed, failed } = parseWhatsAppExport(text);
+    expect(failed).toEqual([]);
+    expect(parsed[0].amount).toBe(-20);
+  });
+
+  it('still rejects a zero amount', () => {
+    const text = '05/11/2020, 10:00 - Tata: Kruh, 0';
+    const { parsed, failed } = parseWhatsAppExport(text);
+    expect(parsed).toEqual([]);
+    expect(failed).toHaveLength(1);
+  });
+
+  it('auto-skips deleted-message placeholders instead of listing them for review', () => {
+    const text = [
+      '24/10/2020, 19:25 - Petar Lazić: aurelia tjestenina, 57.17',
+      '26/10/2020, 22:12 - Mama: This message was deleted',
+      '27/10/2020, 19:41 - Luka: You deleted this message',
+      '28/10/2020, 10:00 - Tata: lidl, 47',
+    ].join('\n');
+    const { parsed, failed, autoSkipped } = parseWhatsAppExport(text);
+    expect(autoSkipped).toHaveLength(2);
+    expect(failed).toEqual([]);
+    expect(parsed).toHaveLength(2);
+  });
+
+  it('ignores a stray trailing comma instead of failing to parse', () => {
+    const text = '27/10/2020, 14:43 - Tata: Lidl, 47,';
+    const { parsed, failed } = parseWhatsAppExport(text);
+    expect(failed).toEqual([]);
+    expect(parsed[0]).toMatchObject({ place: 'Lidl', amount: 47 });
+  });
 });

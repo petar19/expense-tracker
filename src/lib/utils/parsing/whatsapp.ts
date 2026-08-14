@@ -28,16 +28,22 @@ export interface FailedLine {
 export interface ParseResult {
   parsed: ParsedLine[];
   failed: FailedLine[];
+  autoSkipped: FailedLine[];
 }
 
-// `24/10/2020, 19:25 - Petar Lazić: aurelia tjestenina, 57.17`
-const DATED_LINE = /^(?<date>\d{2}\/\d{2}\/\d{4}),\s(?<time>\d{2}:\d{2})\s-\s(?<spender>.+):\s*(?<place>.+),\s*(?<amount>[0-9+.\-*/\s]+)$/;
+// `24/10/2020, 19:25 - Petar Lazić: aurelia tjestenina, 57.17`. Amount allows a
+// leading `-` for downward corrections (e.g. someone lowering a prior entry).
+const DATED_LINE = /^(?<date>\d{2}\/\d{2}\/\d{4}),\s(?<time>\d{2}:\d{2})\s-\s(?<spender>.+):\s*(?<place>.+),\s*(?<amount>-?[0-9+.*/\s]+)$/;
 
 // `[24.10.2020., 19:25:00] Petar Lazić: aurelia tjestenina, 57.17`
-const BRACKETED_LINE = /^\[(?<date>\d{2}\.\d{2}\.\d{4})\.,\s(?<time>\d{2}:\d{2}:\d{2})\]\s(?<spender>.+):\s*(?<place>.+),\s*(?<amount>[0-9+.]+)$/;
+const BRACKETED_LINE = /^\[(?<date>\d{2}\.\d{2}\.\d{4})\.,\s(?<time>\d{2}:\d{2}:\d{2})\]\s(?<spender>.+):\s*(?<place>.+),\s*(?<amount>-?[0-9+.]+)$/;
 
 // Continuation line, same message as the previous dated line: `dolac, 30+12+12`
-const CONTINUATION_LINE = /^\s*(?<place>.+),\s*(?<amount>[0-9+.]+)\s*$/;
+const CONTINUATION_LINE = /^\s*(?<place>.+),\s*(?<amount>-?[0-9+.]+)\s*$/;
+
+// WhatsApp's own placeholder text for a deleted message — never a real
+// expense, safe to auto-skip instead of asking the admin to dismiss each one.
+const DELETED_MESSAGE = /(this message was deleted|you deleted this message)\s*$/i;
 
 // Header-only versions of the two dated formats, used to salvage a partial
 // date/time/spender (and the text after the colon) from lines whose tail
@@ -47,7 +53,7 @@ const BRACKETED_HEADER = /^\[(?<date>\d{2}\.\d{2}\.\d{4})\.,\s(?<time>\d{2}:\d{2
 
 // Amount-then-place, the reverse of the usual order — e.g. "201, gorivo Dacia"
 // instead of "gorivo Dacia, 201" (a common phone-typing slip).
-const REVERSED_TAIL = /^\s*(?<amount>\d+(?:[.,]\d+)?)\s*,\s*(?<place>.+)$/;
+const REVERSED_TAIL = /^\s*(?<amount>-?\d+(?:[.,]\d+)?)\s*,\s*(?<place>.+)$/;
 
 function toIsoDate(day: string, month: string, year: string): string {
   return `${year}-${month}-${day}`;
@@ -113,6 +119,7 @@ export function applyFixes(line: string, fixes: Record<string, string>): string 
 export function parseWhatsAppExport(text: string, fixes: Record<string, string> = {}): ParseResult {
   const parsed: ParsedLine[] = [];
   const failed: FailedLine[] = [];
+  const autoSkipped: FailedLine[] = [];
 
   let date = '';
   let time = '';
@@ -121,8 +128,15 @@ export function parseWhatsAppExport(text: string, fixes: Record<string, string> 
   const lines = text.split(/\r?\n/);
   lines.forEach((originalLine, index) => {
     const lineNumber = index + 1;
-    const line = applyFixes(originalLine, fixes);
+    // Strip a trailing comma some messages ended with by accident (e.g.
+    // "gorivo, 200,") before pattern matching, so it doesn't break the match.
+    const line = applyFixes(originalLine, fixes).replace(/,+\s*$/, '');
     if (line.trim() === '') return;
+
+    if (DELETED_MESSAGE.test(line)) {
+      autoSkipped.push({ lineNumber, raw: originalLine, reason: 'Deleted message', hint: {} });
+      return;
+    }
 
     let place: string | null = null;
     let amountRaw: string | null = null;
@@ -155,11 +169,11 @@ export function parseWhatsAppExport(text: string, fixes: Record<string, string> 
     }
 
     const amount = amountRaw === null ? null : parseAmount(amountRaw);
-    if (amount === null || amount <= 0) {
+    if (amount === null || amount === 0) {
       failed.push({
         lineNumber,
         raw: originalLine,
-        reason: 'Could not parse a positive amount',
+        reason: 'Could not parse a non-zero amount',
         hint: extractHint(line),
       });
       return;
@@ -168,5 +182,5 @@ export function parseWhatsAppExport(text: string, fixes: Record<string, string> 
     parsed.push({ lineNumber, raw: originalLine, date, time, spender, place: place ?? '', amount });
   });
 
-  return { parsed, failed };
+  return { parsed, failed, autoSkipped };
 }

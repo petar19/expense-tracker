@@ -20,6 +20,7 @@
   let fileName = $state('');
   let parsed = $state<ParsedLine[]>([]);
   let failed = $state<FailedLine[]>([]);
+  let autoSkippedCount = $state(0);
   let targetGroupId = $state('');
   let spenderMap = $state<Record<string, string>>({});
   let alreadyImported = $state(false);
@@ -68,6 +69,7 @@
     const result = parseWhatsAppExport(text, LEGACY_FIXES);
     parsed = result.parsed;
     failed = result.failed;
+    autoSkippedCount = result.autoSkipped.length;
     skipped = new Set();
     ignoredCount = 0;
     importDone = false;
@@ -242,7 +244,7 @@
       </label>
       {#if fileName}
         <p class="muted">
-          {fileName}: {parsed.length} lines parsed, {failed.length} need review{#if ignoredCount > 0}, {ignoredCount} ignored{/if}.
+          {fileName}: {parsed.length} lines parsed, {failed.length} need review{#if ignoredCount > 0}, {ignoredCount} ignored{/if}{#if autoSkippedCount > 0}, {autoSkippedCount} deleted-message lines auto-skipped{/if}.
         </p>
       {/if}
     </div>
