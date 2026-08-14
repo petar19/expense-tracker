@@ -44,13 +44,18 @@ service cloud.firestore {
         function group() { return get(/databases/$(database)/documents/groups/$(groupId)).data; }
         function isGroupMember() { return isAllowed() && request.auth.uid in group().members; }
 
+        // paidBy is usually a member uid, but migrated expenses may carry a raw
+        // legacy sender name instead (e.g. someone who's since left the group) —
+        // only require it be a non-empty string, not necessarily a current member.
+        function validPaidBy() { return request.resource.data.paidBy is string && request.resource.data.paidBy.size() > 0; }
+
         allow read: if isGroupMember();
         allow create: if isGroupMember()
           && request.resource.data.createdBy == request.auth.uid
-          && request.resource.data.paidBy in group().members
+          && validPaidBy()
           && request.resource.data.price is number && request.resource.data.price > 0
           && (request.resource.data.source != 'migrated' || isSiteAdmin());
-        allow update: if isGroupMember() && request.resource.data.paidBy in group().members;
+        allow update: if isGroupMember() && validPaidBy();
         allow delete: if isGroupMember();
       }
 

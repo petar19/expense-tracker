@@ -11,6 +11,7 @@
     setMemberExpectedPct,
     setMemberRole,
   } from '../../lib/stores/groups';
+  import UnmappedPayers from './UnmappedPayers.svelte';
 
   let { params }: { params: { groupId: string } } = $props();
 
@@ -161,6 +162,8 @@
         </form>
         {#if error}<p class="muted" style="color: var(--danger)">{error}</p>{/if}
       </div>
+
+      <UnmappedPayers {group} />
 
       <button class="danger" onclick={handleDelete}>Delete group</button>
     {/if}

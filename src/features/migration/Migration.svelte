@@ -45,9 +45,7 @@
 
   let targetGroup = $derived($myGroups.find((g) => g.id === targetGroupId) ?? null);
   let distinctSpenders = $derived([...new Set(parsed.map((p) => p.spender))].sort());
-  let allSpendersMapped = $derived(
-    distinctSpenders.length > 0 && distinctSpenders.every((s) => spenderMap[s]),
-  );
+  let unmappedSpenderCount = $derived(distinctSpenders.filter((s) => !spenderMap[s]).length);
   let activeParsed = $derived(parsed.filter((_, i) => !skipped.has(i)));
   let convertedCount = $derived(activeParsed.filter((p) => needsConversion(p.date)).length);
 
@@ -144,7 +142,10 @@
       for (const batchRows of batches) {
         const batch = writeBatch(db);
         for (const row of batchRows) {
-          const paidBy = spenderMap[row.spender];
+          // Fall back to the raw WhatsApp sender name when there's no mapped
+          // group member (e.g. someone who's since left the group) — still
+          // viewable in expense history, just not tied to an account.
+          const paidBy = spenderMap[row.spender] || row.spender;
           const price = convertIfNeeded(row.date, row.amount);
           const catScores = suggestCategories(row.place, liveCategories);
           const autoCategories = catScores
@@ -291,6 +292,11 @@
     {#if distinctSpenders.length > 0}
       <div class="card stack">
         <h3 style="margin:0">Map spenders to group members</h3>
+        <p class="muted">
+          Optional — anyone left unmapped (e.g. someone who's since left the group)
+          still gets imported under their original WhatsApp name. You can map them
+          to a member later from the group's page.
+        </p>
         {#each distinctSpenders as spender (spender)}
           <div class="row" style="justify-content: space-between">
             <span>{spender}</span>
@@ -331,15 +337,14 @@
 
     {#if parsed.length > 0 && targetGroup}
       <div class="card stack">
-        <button
-          class="primary"
-          disabled={!allSpendersMapped || importing}
-          onclick={runImport}
-        >
+        <button class="primary" disabled={importing} onclick={runImport}>
           {importing ? 'Importing…' : `Import ${activeParsed.length} expenses`}
         </button>
-        {#if !allSpendersMapped}
-          <p class="muted">Map every spender to a group member first.</p>
+        {#if unmappedSpenderCount > 0}
+          <p class="muted">
+            {unmappedSpenderCount} spender{unmappedSpenderCount === 1 ? '' : 's'} unmapped —
+            their expenses will import under their original name.
+          </p>
         {/if}
         {#if importProgress}<p class="muted">{importProgress}</p>{/if}
         {#if importDone}<p class="muted" style="color: var(--success)">Import complete.</p>{/if}
