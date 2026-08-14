@@ -48,7 +48,8 @@ export interface Category {
 }
 
 export interface KnownName {
-  name: string;
+  name: string; // normalized key (doc id)
+  displayName: string;
   count: number;
   lastUsed: number;
 }
