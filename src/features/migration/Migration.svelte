@@ -28,6 +28,7 @@
   let importProgress = $state('');
   let importDone = $state(false);
   let skipped = $state<Set<number>>(new Set());
+  let ignoredCount = $state(0);
   let manualResolveDrafts = $state<Record<number, { date: string; spender: string; place: string; amount: string }>>({});
 
   $effect(() => {
@@ -63,6 +64,7 @@
     parsed = result.parsed;
     failed = result.failed;
     skipped = new Set();
+    ignoredCount = 0;
     importDone = false;
   }
 
@@ -85,6 +87,18 @@
     ];
     failed = failed.filter((f) => f.lineNumber !== line.lineNumber);
     delete manualResolveDrafts[line.lineNumber];
+  }
+
+  function ignoreLine(line: FailedLine) {
+    failed = failed.filter((f) => f.lineNumber !== line.lineNumber);
+    delete manualResolveDrafts[line.lineNumber];
+    ignoredCount += 1;
+  }
+
+  function ignoreAllRemaining() {
+    ignoredCount += failed.length;
+    failed = [];
+    manualResolveDrafts = {};
   }
 
   function chunk<T>(arr: T[], size: number): T[][] {
@@ -223,19 +237,27 @@
       </label>
       {#if fileName}
         <p class="muted">
-          {fileName}: {parsed.length} lines parsed, {failed.length} need review.
+          {fileName}: {parsed.length} lines parsed, {failed.length} need review{#if ignoredCount > 0}, {ignoredCount} ignored{/if}.
         </p>
       {/if}
     </div>
 
     {#if failed.length > 0}
       <div class="card stack">
-        <h3 style="margin:0">Needs review ({failed.length})</h3>
+        <div class="row" style="justify-content: space-between">
+          <h3 style="margin:0">Needs review ({failed.length})</h3>
+          <button type="button" onclick={ignoreAllRemaining}>Ignore all remaining</button>
+        </div>
+        <p class="muted">
+          Usually WhatsApp system messages ("added you", "left", "changed the subject",
+          the encryption notice) rather than real expenses — ignore those, resolve the rest.
+        </p>
         <div class="stack" style="max-height:300px; overflow-y:auto">
           {#each failed as line (line.lineNumber)}
-            <div class="row" style="align-items:flex-start">
+            <div class="row" style="align-items:flex-start; justify-content: space-between">
               <span class="muted" style="min-width:3em">#{line.lineNumber}</span>
               <code style="flex:1">{line.raw}</code>
+              <button type="button" onclick={() => ignoreLine(line)}>Ignore</button>
             </div>
             {#if manualResolveDrafts[line.lineNumber]}
               <form
