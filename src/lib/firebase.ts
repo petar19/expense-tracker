@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore } from 'firebase/firestore';
 
 // Firebase web config is public by design — access control lives in Firestore
 // Security Rules (firestore.rules), not in hiding these values.
@@ -15,5 +15,8 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+// ignoreUndefinedProperties: optional fields (description, itemCount, a
+// subitem's count, etc.) are left as `undefined` when a form field is blank —
+// without this, the Firestore SDK throws instead of just omitting them.
+export const db = initializeFirestore(app, { ignoreUndefinedProperties: true });
 export const googleProvider = new GoogleAuthProvider();
