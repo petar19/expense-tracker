@@ -4,6 +4,7 @@
   import { addExpense, knownNames, updateExpense } from '../../lib/stores/expenses';
   import { suggestCategories, AUTO_CHECK_THRESHOLD } from '../../lib/utils/categorize';
   import { normalizeText } from '../../lib/utils/normalize';
+  import { t } from '../../lib/i18n';
   import MapPicker from '../../lib/components/MapPicker.svelte';
   import type { Expense, ExpenseLocation, Group, Subitem } from '../../lib/types';
 
@@ -70,11 +71,11 @@
     error = '';
     const priceNum = parseFloat(price);
     if (!name.trim()) {
-      error = 'Name is required';
+      error = $t('expenseForm.nameRequired');
       return;
     }
     if (Number.isNaN(priceNum) || priceNum <= 0) {
-      error = 'Price must be a positive number';
+      error = $t('expenseForm.pricePositive');
       return;
     }
     saving = true;
@@ -97,7 +98,7 @@
       }
       onDone();
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to save';
+      error = e instanceof Error ? e.message : $t('expenseForm.saveFailed');
     } finally {
       saving = false;
     }
@@ -107,7 +108,7 @@
 <form class="card stack" onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
   <div class="stack" style="position:relative">
     <label>
-      Name
+      {$t('expenseForm.name')}
       <input bind:value={name} autocomplete="off" required />
     </label>
     {#if nameMatches.length > 0}
@@ -122,24 +123,24 @@
   </div>
 
   <label>
-    Description <span class="muted">(optional)</span>
+    {$t('expenseForm.description')} <span class="muted">{$t('expenseForm.optional')}</span>
     <input bind:value={description} />
   </label>
 
   <div class="row">
     <label style="flex:1">
-      Price (€)
+      {$t('expenseForm.price')}
       <input type="number" step="0.01" min="0" bind:value={price} required />
     </label>
     <label style="flex:1">
-      Item count <span class="muted">(optional)</span>
+      {$t('expenseForm.itemCount')} <span class="muted">{$t('expenseForm.optional')}</span>
       <input type="number" min="1" bind:value={itemCount} />
     </label>
   </div>
 
   <div class="row">
     <label style="flex:1">
-      Paid by
+      {$t('expenseForm.paidBy')}
       <select bind:value={paidBy}>
         {#each Object.entries(group.members) as [uid, member] (uid)}
           <option value={uid}>{member.displayName}</option>
@@ -147,13 +148,13 @@
       </select>
     </label>
     <label style="flex:1">
-      Date
+      {$t('expenseForm.date')}
       <input type="date" bind:value={date} required />
     </label>
   </div>
 
   <div class="stack">
-    <span>Categories</span>
+    <span>{$t('expenseForm.categories')}</span>
     <div class="row">
       {#each $categories as category (category.id)}
         {@const suggestion = suggestions.find((s) => s.categoryId === category.id)}
@@ -174,31 +175,31 @@
 
   <div class="stack">
     <div class="row" style="justify-content: space-between">
-      <span>Subitems <span class="muted">(optional)</span></span>
-      <button type="button" disabled title="Coming soon — scan a receipt photo to fill these in automatically">
-        📷 Scan receipt
+      <span>{$t('expenseForm.subitems')} <span class="muted">{$t('expenseForm.optional')}</span></span>
+      <button type="button" disabled title={$t('expenseForm.scanReceiptTooltip')}>
+        {$t('expenseForm.scanReceipt')}
       </button>
     </div>
     {#each subitems as subitem, i (i)}
       <div class="row">
-        <input placeholder="item name" bind:value={subitem.name} style="flex:1" />
-        <input type="number" step="0.01" min="0" placeholder="price" bind:value={subitem.price} style="width:6em" />
-        <input type="number" min="1" placeholder="count" bind:value={subitem.count} style="width:5em" />
+        <input placeholder={$t('expenseForm.itemNamePlaceholder')} bind:value={subitem.name} style="flex:1" />
+        <input type="number" step="0.01" min="0" placeholder={$t('expenseForm.pricePlaceholder')} bind:value={subitem.price} style="width:6em" />
+        <input type="number" min="1" placeholder={$t('expenseForm.countPlaceholder')} bind:value={subitem.count} style="width:5em" />
         <button type="button" onclick={() => removeSubitem(i)}>✕</button>
       </div>
     {/each}
-    <button type="button" onclick={addSubitem}>+ Add subitem</button>
+    <button type="button" onclick={addSubitem}>{$t('expenseForm.addSubitem')}</button>
     {#if subitems.length > 0}
-      <p class="muted">Subitems total: {subitemsTotal.toFixed(2)}</p>
+      <p class="muted">{$t('expenseForm.subitemsTotal', { total: subitemsTotal.toFixed(2) })}</p>
     {/if}
   </div>
 
   <div class="stack">
     {#if showMap}
       <MapPicker {location} onChange={(loc) => (location = loc)} />
-      <button type="button" onclick={() => { showMap = false; location = null; }}>Remove location</button>
+      <button type="button" onclick={() => { showMap = false; location = null; }}>{$t('expenseForm.removeLocation')}</button>
     {:else}
-      <button type="button" onclick={() => (showMap = true)}>📍 Add location</button>
+      <button type="button" onclick={() => (showMap = true)}>{$t('expenseForm.addLocation')}</button>
     {/if}
   </div>
 
@@ -206,8 +207,8 @@
 
   <div class="row">
     <button class="primary" type="submit" disabled={saving}>
-      {expense ? 'Save changes' : 'Add expense'}
+      {expense ? $t('expenseForm.saveChanges') : $t('expenseForm.addExpense')}
     </button>
-    <button type="button" onclick={onDone}>Cancel</button>
+    <button type="button" onclick={onDone}>{$t('common.cancel')}</button>
   </div>
 </form>

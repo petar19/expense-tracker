@@ -3,6 +3,7 @@
   import { expenses, knownNames } from '../../lib/stores/expenses';
   import { categories } from '../../lib/stores/categories';
   import { nameAliases, saveAlias } from '../../lib/stores/nameAliases';
+  import { locale, t } from '../../lib/i18n';
   import ChartView from '../../lib/components/ChartView.svelte';
   import MonthPicker from '../../lib/components/MonthPicker.svelte';
   import {
@@ -25,7 +26,9 @@
   let sortKey = $state<SortKey>('date-desc');
   let bucket = $state<BucketSize | 'auto'>('auto');
 
-  const currency = new Intl.NumberFormat('hr-HR', { style: 'currency', currency: 'EUR' });
+  let currency = $derived(
+    new Intl.NumberFormat($locale === 'hr' ? 'hr-HR' : 'en-US', { style: 'currency', currency: 'EUR' }),
+  );
 
   let filtered = $derived(
     filterExpenses($expenses, {
@@ -68,11 +71,15 @@
     await saveAlias($activeGroup.id, members, canonicalName);
   }
 
+  let bucketLabel = $derived(
+    { day: $t('stats.bucketDay'), week: $t('stats.bucketWeek'), month: $t('stats.bucketMonth') }[effectiveBucket],
+  );
+
   let timeChartConfig = $derived({
     type: 'bar' as const,
     data: {
       labels: timeAgg.map((a) => a.key),
-      datasets: [{ label: 'Spent', data: timeAgg.map((a) => a.total), backgroundColor: '#4f46e5' }],
+      datasets: [{ label: $t('stats.overTime', { bucket: bucketLabel }), data: timeAgg.map((a) => a.total), backgroundColor: '#4f46e5' }],
     },
     options: { responsive: true, maintainAspectRatio: false },
   });
@@ -95,39 +102,39 @@
 </script>
 
 <div class="page stack">
-  <h2>Stats</h2>
+  <h2>{$t('stats.title')}</h2>
 
   {#if !$activeGroup}
-    <p class="muted">Pick an active group first.</p>
+    <p class="muted">{$t('stats.pickGroup')}</p>
   {:else}
     <div class="card stack">
-      <MonthPicker onSelect={(f, t) => { from = f; to = t; }} />
+      <MonthPicker onSelect={(f, toDate) => { from = f; to = toDate; }} />
       <div class="row">
-        <label>From <input type="date" bind:value={from} /></label>
-        <label>To <input type="date" bind:value={to} /></label>
+        <label>{$t('stats.from')} <input type="date" bind:value={from} /></label>
+        <label>{$t('stats.to')} <input type="date" bind:value={to} /></label>
         <label>
-          Sort
+          {$t('stats.sort')}
           <select bind:value={sortKey}>
-            <option value="date-desc">Newest first</option>
-            <option value="date-asc">Oldest first</option>
-            <option value="price-desc">Highest price</option>
-            <option value="price-asc">Lowest price</option>
-            <option value="name-asc">Name (A-Z)</option>
+            <option value="date-desc">{$t('stats.sortDateDesc')}</option>
+            <option value="date-asc">{$t('stats.sortDateAsc')}</option>
+            <option value="price-desc">{$t('stats.sortPriceDesc')}</option>
+            <option value="price-asc">{$t('stats.sortPriceAsc')}</option>
+            <option value="name-asc">{$t('stats.sortNameAsc')}</option>
           </select>
         </label>
         <label>
-          Bucket
+          {$t('stats.bucket')}
           <select bind:value={bucket}>
-            <option value="auto">Auto</option>
-            <option value="day">Day</option>
-            <option value="week">Week</option>
-            <option value="month">Month</option>
+            <option value="auto">{$t('stats.bucketAuto')}</option>
+            <option value="day">{$t('stats.bucketDay')}</option>
+            <option value="week">{$t('stats.bucketWeek')}</option>
+            <option value="month">{$t('stats.bucketMonth')}</option>
           </select>
         </label>
       </div>
-      <input placeholder="Search name/description" bind:value={search} />
+      <input placeholder={$t('stats.searchPlaceholder')} bind:value={search} />
       <div class="row">
-        <span class="muted">Categories:</span>
+        <span class="muted">{$t('stats.categoriesLabel')}</span>
         {#each $categories as cat (cat.id)}
           <button
             type="button"
@@ -140,7 +147,7 @@
       </div>
       {#if $activeGroup}
         <div class="row">
-          <span class="muted">Spender:</span>
+          <span class="muted">{$t('stats.spenderLabel')}</span>
           {#each Object.entries($activeGroup.members) as [uid, member] (uid)}
             <button
               type="button"
@@ -155,26 +162,26 @@
     </div>
 
     <div class="card row" style="justify-content: space-between">
-      <strong>{filtered.length} expenses</strong>
+      <strong>{$t('stats.expenseCount', { count: filtered.length })}</strong>
       <strong>{currency.format(total)}</strong>
     </div>
 
     {#if timeAgg.length > 0}
       <div class="card">
-        <h3>Over time ({effectiveBucket})</h3>
+        <h3>{$t('stats.overTime', { bucket: bucketLabel })}</h3>
         <ChartView config={timeChartConfig} />
       </div>
     {/if}
 
     {#if categoryAgg.length > 0}
       <div class="card">
-        <h3>By category</h3>
+        <h3>{$t('stats.byCategory')}</h3>
         <ChartView config={categoryChartConfig} />
       </div>
     {/if}
 
     <div class="card stack">
-      <h3 style="margin:0">By spender</h3>
+      <h3 style="margin:0">{$t('stats.bySpender')}</h3>
       {#each spenderAgg as agg (agg.key)}
         <div class="row" style="justify-content: space-between">
           <span>{memberName(agg.key)}</span>
@@ -184,7 +191,7 @@
     </div>
 
     <div class="card stack">
-      <h3 style="margin:0">By name (fuzzy-grouped)</h3>
+      <h3 style="margin:0">{$t('stats.byName')}</h3>
       {#each nameResult.aggregates.slice(0, 25) as agg (agg.key)}
         <div class="row" style="justify-content: space-between">
           <span>{agg.key}</span>
@@ -193,13 +200,13 @@
       {/each}
       {#if clustersToReview().length > 0}
         <details>
-          <summary class="muted">Suggested groupings ({clustersToReview().length})</summary>
+          <summary class="muted">{$t('stats.suggestedGroupings', { count: clustersToReview().length })}</summary>
           <div class="stack">
             {#each clustersToReview() as cluster (cluster.canonicalName + cluster.members.join())}
               <div class="row" style="justify-content: space-between">
                 <span>{cluster.members.join(' + ')} → <strong>{cluster.canonicalName}</strong></span>
                 <button onclick={() => acceptCluster(cluster.canonicalName, cluster.members)}>
-                  Save as alias
+                  {$t('stats.saveAsAlias')}
                 </button>
               </div>
             {/each}
@@ -209,7 +216,7 @@
     </div>
 
     <div class="card stack">
-      <h3 style="margin:0">Expenses ({sorted.length})</h3>
+      <h3 style="margin:0">{$t('stats.expensesHeader', { count: sorted.length })}</h3>
       <div class="stack" style="max-height:400px; overflow-y:auto">
         {#each sorted as expense (expense.id)}
           <div class="row" style="justify-content: space-between">

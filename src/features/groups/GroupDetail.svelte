@@ -1,6 +1,7 @@
 <script lang="ts">
   import { push } from 'svelte-spa-router';
   import { currentUser } from '../../lib/stores/auth';
+  import { t } from '../../lib/i18n';
   import {
     activeGroupId,
     deleteGroup,
@@ -37,7 +38,7 @@
       await inviteMemberByEmail(group, inviteEmail);
       inviteEmail = '';
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to invite';
+      error = e instanceof Error ? e.message : $t('groupDetail.inviteFailed');
     } finally {
       busy = false;
     }
@@ -45,7 +46,7 @@
 
   async function handleRemove(uid: string) {
     if (!group) return;
-    if (!confirm('Remove this member from the group?')) return;
+    if (!confirm($t('groupDetail.removeConfirm'))) return;
     await removeMember(group, uid);
   }
 
@@ -76,7 +77,7 @@
 
   async function handleDelete() {
     if (!group) return;
-    if (!confirm(`Delete group "${group.name}"? This cannot be undone.`)) return;
+    if (!confirm($t('groupDetail.deleteConfirm', { name: group.name }))) return;
     await deleteGroup(group.id);
     push('/groups');
   }
@@ -89,39 +90,39 @@
 
 <div class="page stack">
   {#if !group}
-    <p class="muted">Group not found (or you're not a member).</p>
+    <p class="muted">{$t('groupDetail.notFound')}</p>
   {:else}
     <div class="row" style="justify-content: space-between">
       {#if editingName}
         <form class="row" onsubmit={(e) => { e.preventDefault(); saveName(); }}>
           <input bind:value={nameDraft} />
-          <button class="primary" type="submit">Save</button>
-          <button type="button" onclick={() => (editingName = false)}>Cancel</button>
+          <button class="primary" type="submit">{$t('common.save')}</button>
+          <button type="button" onclick={() => (editingName = false)}>{$t('common.cancel')}</button>
         </form>
       {:else}
         <h2 style="margin:0">{group.name}</h2>
         {#if isAdmin}
-          <button onclick={startEditName}>Rename</button>
+          <button onclick={startEditName}>{$t('groupDetail.rename')}</button>
         {/if}
       {/if}
     </div>
 
     <div class="row">
       {#if $activeGroupId === group.id}
-        <span class="muted">✓ Active group</span>
+        <span class="muted">{$t('groupDetail.activeGroup')}</span>
       {:else}
-        <button onclick={setActive}>Set as active group</button>
+        <button onclick={setActive}>{$t('groupDetail.setActive')}</button>
       {/if}
     </div>
 
     <div class="card stack">
-      <h3 style="margin:0">Members</h3>
+      <h3 style="margin:0">{$t('groupDetail.members')}</h3>
       {#each Object.entries(group.members) as [uid, member] (uid)}
         <div class="row" style="justify-content: space-between">
           <div>
             <strong>{member.displayName}</strong>
             <span class="muted">— {member.email}</span>
-            {#if member.role === 'admin'}<span class="muted">(admin)</span>{/if}
+            {#if member.role === 'admin'}<span class="muted">{$t('groupDetail.admin')}</span>{/if}
           </div>
           {#if isAdmin}
             <div class="row">
@@ -133,10 +134,10 @@
               />
               <span class="muted">%</span>
               <button onclick={() => handleRoleToggle(uid, member.role === 'admin')}>
-                {member.role === 'admin' ? 'Make member' : 'Make admin'}
+                {member.role === 'admin' ? $t('groupDetail.makeMember') : $t('groupDetail.makeAdmin')}
               </button>
               {#if uid !== $currentUser?.uid}
-                <button class="danger" onclick={() => handleRemove(uid)}>Remove</button>
+                <button class="danger" onclick={() => handleRemove(uid)}>{$t('common.remove')}</button>
               {/if}
             </div>
           {:else}
@@ -146,26 +147,25 @@
       {/each}
       {#if Math.abs(pctTotal - 100) > 0.01}
         <p class="muted" style="color: var(--danger)">
-          Expected shares add up to {pctTotal}%, not 100% — settle-up numbers will be
-          off until this is fixed.
+          {$t('groupDetail.pctWarning', { pct: pctTotal })}
         </p>
       {/if}
     </div>
 
     {#if isAdmin}
       <div class="card stack">
-        <h3 style="margin:0">Invite a member</h3>
-        <p class="muted">They must already be on the app's allowlist and have signed in once.</p>
+        <h3 style="margin:0">{$t('groupDetail.inviteTitle')}</h3>
+        <p class="muted">{$t('groupDetail.inviteDescription')}</p>
         <form class="row" onsubmit={(e) => { e.preventDefault(); handleInvite(); }}>
-          <input type="email" placeholder="name@example.com" bind:value={inviteEmail} />
-          <button class="primary" type="submit" disabled={busy}>Invite</button>
+          <input type="email" placeholder={$t('allowlist.emailPlaceholder')} bind:value={inviteEmail} />
+          <button class="primary" type="submit" disabled={busy}>{$t('groupDetail.invite')}</button>
         </form>
         {#if error}<p class="muted" style="color: var(--danger)">{error}</p>{/if}
       </div>
 
       <UnmappedPayers {group} />
 
-      <button class="danger" onclick={handleDelete}>Delete group</button>
+      <button class="danger" onclick={handleDelete}>{$t('groupDetail.deleteGroup')}</button>
     {/if}
   {/if}
 </div>

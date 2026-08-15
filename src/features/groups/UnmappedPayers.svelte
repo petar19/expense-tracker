@@ -1,6 +1,7 @@
 <script lang="ts">
   import { collection, doc, getDocs, writeBatch } from 'firebase/firestore';
   import { db } from '../../lib/firebase';
+  import { t } from '../../lib/i18n';
   import type { Group } from '../../lib/types';
 
   let { group }: { group: Group } = $props();
@@ -34,7 +35,7 @@
         .sort((a, b) => b.count - a.count);
       checked = true;
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to check';
+      error = e instanceof Error ? e.message : $t('unmapped.checkFailed');
     } finally {
       loading = false;
     }
@@ -60,7 +61,7 @@
       }
       entries = entries.filter((e) => e.name !== entry.name);
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to apply';
+      error = e instanceof Error ? e.message : $t('unmapped.applyFailed');
     } finally {
       applying[entry.name] = false;
     }
@@ -68,25 +69,21 @@
 </script>
 
 <div class="card stack">
-  <h3 style="margin:0">Unmapped payers from old data</h3>
-  <p class="muted">
-    Expense names carried over from a migration for someone who isn't (or isn't
-    yet) a member of this group. Map them to a current member whenever you like —
-    nothing needs to be done right away.
-  </p>
+  <h3 style="margin:0">{$t('unmapped.title')}</h3>
+  <p class="muted">{$t('unmapped.description')}</p>
 
   {#if !checked}
-    <button onclick={load} disabled={loading}>{loading ? 'Checking…' : 'Check for unmapped payers'}</button>
+    <button onclick={load} disabled={loading}>{loading ? $t('unmapped.checking') : $t('unmapped.check')}</button>
   {:else if entries.length === 0}
-    <p class="muted">None found.</p>
+    <p class="muted">{$t('unmapped.none')}</p>
   {:else}
     <div class="stack">
       {#each entries as entry (entry.name)}
         <div class="row" style="justify-content: space-between">
-          <span>{entry.name} <span class="muted">({entry.count} expense{entry.count === 1 ? '' : 's'})</span></span>
+          <span>{entry.name} <span class="muted">({$t('unmapped.expenseCount', { count: entry.count })})</span></span>
           <div class="row">
             <select bind:value={selection[entry.name]}>
-              <option value="">— map to —</option>
+              <option value="">{$t('unmapped.mapTo')}</option>
               {#each Object.entries(group.members) as [uid, member] (uid)}
                 <option value={uid}>{member.displayName}</option>
               {/each}
@@ -95,13 +92,13 @@
               disabled={!selection[entry.name] || applying[entry.name]}
               onclick={() => applyMapping(entry)}
             >
-              {applying[entry.name] ? 'Applying…' : 'Apply'}
+              {applying[entry.name] ? $t('unmapped.applying') : $t('unmapped.apply')}
             </button>
           </div>
         </div>
       {/each}
     </div>
-    <button onclick={load} disabled={loading}>Re-check</button>
+    <button onclick={load} disabled={loading}>{$t('unmapped.recheck')}</button>
   {/if}
   {#if error}<p class="muted" style="color: var(--danger)">{error}</p>{/if}
 </div>

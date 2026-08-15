@@ -4,6 +4,7 @@
   import Nav from './lib/components/Nav.svelte';
   import Login from './features/auth/Login.svelte';
   import NotAllowed from './lib/components/NotAllowed.svelte';
+  import { t } from './lib/i18n';
   import {
     allowedLoading,
     allowedRole,
@@ -13,11 +14,11 @@
 </script>
 
 {#if $authInitializing}
-  <div class="center-screen"><p class="muted">Loading…</p></div>
+  <div class="center-screen"><p class="muted">{$t('app.loading')}</p></div>
 {:else if !$currentUser}
   <Login />
 {:else if $allowedLoading}
-  <div class="center-screen"><p class="muted">Checking access…</p></div>
+  <div class="center-screen"><p class="muted">{$t('app.checkingAccess')}</p></div>
 {:else if !$allowedRole}
   <NotAllowed />
 {:else}

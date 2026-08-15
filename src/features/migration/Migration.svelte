@@ -11,6 +11,7 @@
   import { allowedRole, currentUser } from '../../lib/stores/auth';
   import { myGroups } from '../../lib/stores/groups';
   import { categories as categoriesStore } from '../../lib/stores/categories';
+  import { t } from '../../lib/i18n';
   import { parseWhatsAppExport, type FailedLine, type ParsedLine } from '../../lib/utils/parsing/whatsapp';
   import { convertIfNeeded, needsConversion } from '../../lib/utils/currency';
   import { normalizeText } from '../../lib/utils/normalize';
@@ -48,6 +49,13 @@
   let unmappedSpenderCount = $derived(distinctSpenders.filter((s) => !spenderMap[s]).length);
   let activeParsed = $derived(parsed.filter((_, i) => !skipped.has(i)));
   let convertedCount = $derived(activeParsed.filter((p) => needsConversion(p.date)).length);
+
+  let summaryText = $derived.by(() => {
+    let s = $t('migration.summaryBase', { fileName, parsed: parsed.length, failed: failed.length });
+    if (ignoredCount > 0) s += $t('migration.summaryIgnored', { count: ignoredCount });
+    if (autoSkippedCount > 0) s += $t('migration.summarySkipped', { count: autoSkippedCount });
+    return `${s}.`;
+  });
 
   $effect(() => {
     if (!targetGroupId) return;
@@ -118,7 +126,6 @@
     importDone = false;
     try {
       // 1. Seed legacy categories if this project has none yet.
-      importProgress = 'Checking categories…';
       const existingCategories = await getDocs(collection(db, 'categories'));
       let liveCategories = $categoriesStore;
       if (existingCategories.empty) {
@@ -174,11 +181,10 @@
         }
         await batch.commit();
         written += batchRows.length;
-        importProgress = `Imported ${written} / ${rows.length} expenses…`;
+        importProgress = $t('migration.importProgress', { done: written, total: rows.length });
       }
 
       // 3. Seed knownNames.
-      importProgress = 'Seeding autocomplete names…';
       const nameBatches = chunk([...nameCounts.entries()], 400);
       for (const batchEntries of nameBatches) {
         const batch = writeBatch(db);
@@ -203,9 +209,8 @@
 
       alreadyImported = true;
       importDone = true;
-      importProgress = `Done — imported ${rows.length} expenses.`;
     } catch (e) {
-      importProgress = `Failed: ${e instanceof Error ? e.message : String(e)}`;
+      importProgress = $t('migration.importFailed', { error: e instanceof Error ? e.message : String(e) });
     } finally {
       importing = false;
     }
@@ -213,75 +218,67 @@
 </script>
 
 <div class="page stack">
-  <h2>Migrate old WhatsApp export</h2>
+  <h2>{$t('migration.title')}</h2>
 
   {#if $allowedRole !== 'admin'}
-    <p class="muted">Admins only.</p>
+    <p class="muted">{$t('migration.adminsOnly')}</p>
   {:else}
     <div class="card stack">
       <label>
-        Target group
+        {$t('migration.targetGroup')}
         <select bind:value={targetGroupId}>
-          <option value="">Choose a group…</option>
+          <option value="">{$t('migration.chooseGroup')}</option>
           {#each $myGroups as group (group.id)}
             <option value={group.id}>{group.name}</option>
           {/each}
         </select>
       </label>
       {#if checkingImportStatus}
-        <p class="muted">Checking import history…</p>
+        <p class="muted">{$t('migration.checkingHistory')}</p>
       {:else if alreadyImported}
-        <p class="muted" style="color: var(--danger)">
-          This group already has a completed legacy import. Running it again will add
-          duplicate expenses.
-        </p>
+        <p class="muted" style="color: var(--danger)">{$t('migration.alreadyImported')}</p>
       {/if}
     </div>
 
     <div class="card stack">
       <label>
-        WhatsApp export (.txt)
+        {$t('migration.fileLabel')}
         <input type="file" accept=".txt" onchange={handleFile} />
       </label>
       {#if fileName}
-        <p class="muted">
-          {fileName}: {parsed.length} lines parsed, {failed.length} need review{#if ignoredCount > 0}, {ignoredCount} ignored{/if}{#if autoSkippedCount > 0}, {autoSkippedCount} deleted-message lines auto-skipped{/if}.
-        </p>
+        <p class="muted">{summaryText}</p>
       {/if}
     </div>
 
     {#if failed.length > 0}
       <div class="card stack">
         <div class="row" style="justify-content: space-between">
-          <h3 style="margin:0">Needs review ({failed.length})</h3>
-          <button type="button" onclick={ignoreAllRemaining}>Ignore all remaining</button>
+          <h3 style="margin:0">{$t('migration.needsReview', { count: failed.length })}</h3>
+          <button type="button" onclick={ignoreAllRemaining}>{$t('migration.ignoreAllRemaining')}</button>
         </div>
-        <p class="muted">
-          Usually WhatsApp system messages ("added you", "left", "changed the subject",
-          the encryption notice) rather than real expenses — ignore those, resolve the rest.
-        </p>
+        <p class="muted">{$t('migration.reviewHint')}</p>
         <div class="stack" style="max-height:300px; overflow-y:auto">
           {#each failed as line (line.lineNumber)}
             <div class="row" style="align-items:flex-start; justify-content: space-between">
               <span class="muted" style="min-width:3em">#{line.lineNumber}</span>
               <code style="flex:1">{line.raw}</code>
-              <button type="button" onclick={() => ignoreLine(line)}>Ignore</button>
+              <button type="button" onclick={() => ignoreLine(line)}>{$t('migration.ignore')}</button>
             </div>
             {#if manualResolveDrafts[line.lineNumber]}
               <form
                 class="row"
                 onsubmit={(e) => { e.preventDefault(); resolveManually(line); }}
               >
-                <input type="date" placeholder="date" bind:value={manualResolveDrafts[line.lineNumber].date} />
-                <input placeholder="spender" bind:value={manualResolveDrafts[line.lineNumber].spender} />
-                <input placeholder="place" bind:value={manualResolveDrafts[line.lineNumber].place} />
+                <input type="date" placeholder={$t('migration.datePlaceholder')} bind:value={manualResolveDrafts[line.lineNumber].date} />
+                <input placeholder={$t('migration.spenderPlaceholder')} bind:value={manualResolveDrafts[line.lineNumber].spender} />
+                <input placeholder={$t('migration.placePlaceholder')} bind:value={manualResolveDrafts[line.lineNumber].place} />
                 <input
-                  placeholder="amount"
+                  placeholder={$t('migration.amountPlaceholder')}
                   type="number"
                   step="0.01"
                   bind:value={manualResolveDrafts[line.lineNumber].amount}
                 />
-                <button type="submit">Resolve</button>
+                <button type="submit">{$t('migration.resolve')}</button>
               </form>
             {/if}
           {/each}
@@ -291,17 +288,13 @@
 
     {#if distinctSpenders.length > 0}
       <div class="card stack">
-        <h3 style="margin:0">Map spenders to group members</h3>
-        <p class="muted">
-          Optional — anyone left unmapped (e.g. someone who's since left the group)
-          still gets imported under their original WhatsApp name. You can map them
-          to a member later from the group's page.
-        </p>
+        <h3 style="margin:0">{$t('migration.mapSpendersTitle')}</h3>
+        <p class="muted">{$t('migration.mapSpendersHint')}</p>
         {#each distinctSpenders as spender (spender)}
           <div class="row" style="justify-content: space-between">
             <span>{spender}</span>
             <select bind:value={spenderMap[spender]}>
-              <option value="">— unmapped —</option>
+              <option value="">{$t('migration.unmappedOption')}</option>
               {#if targetGroup}
                 {#each Object.entries(targetGroup.members) as [uid, member] (uid)}
                   <option value={uid}>{member.displayName}</option>
@@ -315,8 +308,8 @@
 
     {#if parsed.length > 0}
       <div class="card stack">
-        <h3 style="margin:0">Parsed rows ({activeParsed.length} of {parsed.length})</h3>
-        <p class="muted">{convertedCount} will be converted from HRK to EUR (peg 7.5345).</p>
+        <h3 style="margin:0">{$t('migration.parsedRows', { active: activeParsed.length, total: parsed.length })}</h3>
+        <p class="muted">{$t('migration.conversionNote', { count: convertedCount })}</p>
         <div class="stack" style="max-height:400px; overflow-y:auto">
           {#each parsed as row, i (row.lineNumber + row.raw)}
             <div class="row" style={skipped.has(i) ? 'opacity:0.4' : ''}>
@@ -338,16 +331,13 @@
     {#if parsed.length > 0 && targetGroup}
       <div class="card stack">
         <button class="primary" disabled={importing} onclick={runImport}>
-          {importing ? 'Importing…' : `Import ${activeParsed.length} expenses`}
+          {importing ? $t('migration.importing') : $t('migration.importButton', { count: activeParsed.length })}
         </button>
         {#if unmappedSpenderCount > 0}
-          <p class="muted">
-            {unmappedSpenderCount} spender{unmappedSpenderCount === 1 ? '' : 's'} unmapped —
-            their expenses will import under their original name.
-          </p>
+          <p class="muted">{$t('migration.unmappedNote', { count: unmappedSpenderCount })}</p>
         {/if}
         {#if importProgress}<p class="muted">{importProgress}</p>{/if}
-        {#if importDone}<p class="muted" style="color: var(--success)">Import complete.</p>{/if}
+        {#if importDone}<p class="muted" style="color: var(--success)">{$t('migration.importComplete')}</p>{/if}
       </div>
     {/if}
   {/if}

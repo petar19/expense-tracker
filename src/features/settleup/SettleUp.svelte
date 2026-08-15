@@ -3,12 +3,15 @@
   import { expenses } from '../../lib/stores/expenses';
   import { filterExpenses } from '../../lib/utils/stats';
   import { computeBalances, simplifyDebts } from '../../lib/utils/debt';
+  import { locale, t } from '../../lib/i18n';
   import MonthPicker from '../../lib/components/MonthPicker.svelte';
 
   let from = $state('');
   let to = $state('');
 
-  const currency = new Intl.NumberFormat('hr-HR', { style: 'currency', currency: 'EUR' });
+  let currency = $derived(
+    new Intl.NumberFormat($locale === 'hr' ? 'hr-HR' : 'en-US', { style: 'currency', currency: 'EUR' }),
+  );
 
   let filtered = $derived(
     filterExpenses($expenses, { from: from || undefined, to: to || undefined }),
@@ -35,40 +38,42 @@
 </script>
 
 <div class="page stack">
-  <h2>Settle up</h2>
+  <h2>{$t('settleUp.title')}</h2>
 
   {#if !$activeGroup}
-    <p class="muted">Pick an active group first.</p>
+    <p class="muted">{$t('settleUp.pickGroup')}</p>
   {:else}
     <div class="card stack">
-      <MonthPicker onSelect={(f, t) => { from = f; to = t; }} />
+      <MonthPicker onSelect={(f, toDate) => { from = f; to = toDate; }} />
       <div class="row">
-        <label>From <input type="date" bind:value={from} /></label>
-        <label>To <input type="date" bind:value={to} /></label>
+        <label>{$t('stats.from')} <input type="date" bind:value={from} /></label>
+        <label>{$t('stats.to')} <input type="date" bind:value={to} /></label>
       </div>
     </div>
 
     <div class="card stack">
-      <h3 style="margin:0">Paid vs. expected</h3>
+      <h3 style="margin:0">{$t('settleUp.paidVsExpected')}</h3>
       {#each memberInputs as m (m.uid)}
         <div class="row" style="justify-content: space-between">
           <span>{m.displayName} <span class="muted">({m.expectedPct}%)</span></span>
           <span>
-            paid {currency.format(m.totalPaid)}, expected
-            {currency.format((m.expectedPct / 100) * subsetTotal)}
+            {$t('settleUp.paidExpected', {
+              paid: currency.format(m.totalPaid),
+              expected: currency.format((m.expectedPct / 100) * subsetTotal),
+            })}
           </span>
         </div>
       {/each}
       <div class="row" style="justify-content: space-between">
-        <strong>Total</strong>
+        <strong>{$t('settleUp.total')}</strong>
         <strong>{currency.format(subsetTotal)}</strong>
       </div>
     </div>
 
     <div class="card stack">
-      <h3 style="margin:0">Who owes whom</h3>
+      <h3 style="margin:0">{$t('settleUp.whoOwesWhom')}</h3>
       {#if transfers.length === 0}
-        <p class="muted">Everyone's even.</p>
+        <p class="muted">{$t('settleUp.allEven')}</p>
       {:else}
         {#each transfers as t (t.from + t.to)}
           <div class="row" style="justify-content: space-between">

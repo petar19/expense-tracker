@@ -3,6 +3,7 @@
   import { activeGroup, myGroups, myGroupsLoading } from '../../lib/stores/groups';
   import { categories } from '../../lib/stores/categories';
   import { deleteExpense, expenses, expensesLoading } from '../../lib/stores/expenses';
+  import { locale, t } from '../../lib/i18n';
   import ExpenseForm from './ExpenseForm.svelte';
   import type { Expense } from '../../lib/types';
 
@@ -35,26 +36,28 @@
 
   async function handleDelete(expense: Expense) {
     if (!$activeGroup) return;
-    if (!confirm(`Delete "${expense.name}"?`)) return;
+    if (!confirm($t('expenseList.deleteConfirm', { name: expense.name }))) return;
     await deleteExpense($activeGroup.id, expense.id);
   }
 
-  const currency = new Intl.NumberFormat('hr-HR', { style: 'currency', currency: 'EUR' });
+  let currency = $derived(
+    new Intl.NumberFormat($locale === 'hr' ? 'hr-HR' : 'en-US', { style: 'currency', currency: 'EUR' }),
+  );
 </script>
 
 <div class="page stack">
   {#if $myGroupsLoading}
-    <p class="muted">Loading…</p>
+    <p class="muted">{$t('common.loading')}</p>
   {:else if $myGroups.length === 0}
     <div class="center-screen">
-      <h2>No groups yet</h2>
-      <p class="muted">Create a group to start tracking shared expenses.</p>
-      <a href="/groups" use:link><button class="primary">Go to groups</button></a>
+      <h2>{$t('expenseList.noGroupsTitle')}</h2>
+      <p class="muted">{$t('expenseList.noGroupsBody')}</p>
+      <a href="/groups" use:link><button class="primary">{$t('expenseList.goToGroups')}</button></a>
     </div>
   {:else if $activeGroup}
     <div class="row" style="justify-content: space-between">
       <h2 style="margin:0">{$activeGroup.name}</h2>
-      <button class="primary" onclick={startAdd}>+ Add expense</button>
+      <button class="primary" onclick={startAdd}>{$t('expenseList.addExpense')}</button>
     </div>
 
     {#if showForm}
@@ -62,9 +65,9 @@
     {/if}
 
     {#if $expensesLoading}
-      <p class="muted">Loading expenses…</p>
+      <p class="muted">{$t('expenseList.loadingExpenses')}</p>
     {:else if $expenses.length === 0}
-      <p class="muted">No expenses yet.</p>
+      <p class="muted">{$t('expenseList.empty')}</p>
     {:else}
       <div class="stack">
         {#each $expenses as expense (expense.id)}
@@ -80,11 +83,11 @@
             </div>
             <div class="row muted">
               <span>{expense.date}</span>
-              <span>· paid by {memberName(expense.paidBy)}</span>
-              {#if expense.itemCount}<span>· {expense.itemCount} items</span>{/if}
-              {#if expense.subitems.length > 0}<span>· {expense.subitems.length} subitems</span>{/if}
-              {#if expense.location}<span>· 📍 location</span>{/if}
-              {#if expense.source === 'migrated'}<span>· migrated</span>{/if}
+              <span>· {$t('expenseList.paidBy', { name: memberName(expense.paidBy) })}</span>
+              {#if expense.itemCount}<span>· {$t('expenseList.items', { count: expense.itemCount })}</span>{/if}
+              {#if expense.subitems.length > 0}<span>· {$t('expenseList.subitems', { count: expense.subitems.length })}</span>{/if}
+              {#if expense.location}<span>· {$t('expenseList.location')}</span>{/if}
+              {#if expense.source === 'migrated'}<span>· {$t('expenseList.migrated')}</span>{/if}
             </div>
             {#if expense.categories.length > 0}
               <div class="row">
@@ -94,8 +97,8 @@
               </div>
             {/if}
             <div class="row">
-              <button onclick={() => startEdit(expense)}>Edit</button>
-              <button class="danger" onclick={() => handleDelete(expense)}>Delete</button>
+              <button onclick={() => startEdit(expense)}>{$t('common.edit')}</button>
+              <button class="danger" onclick={() => handleDelete(expense)}>{$t('common.delete')}</button>
             </div>
           </div>
         {/each}

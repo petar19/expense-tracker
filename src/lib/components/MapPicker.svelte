@@ -4,6 +4,7 @@
   import icon from 'leaflet/dist/images/marker-icon.png';
   import icon2x from 'leaflet/dist/images/marker-icon-2x.png';
   import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+  import { t } from '../i18n';
   import type { ExpenseLocation } from '../types';
 
   // Vite bundlers break Leaflet's default marker icon lookup; point it at the
@@ -47,7 +48,7 @@
   function useCurrentLocation() {
     error = '';
     if (!navigator.geolocation) {
-      error = 'Geolocation not available in this browser';
+      error = $t('mapPicker.geoUnavailable');
       return;
     }
     locating = true;
@@ -78,10 +79,10 @@
 <div class="stack">
   <div class="row">
     <button type="button" onclick={useCurrentLocation} disabled={locating}>
-      {locating ? 'Locating…' : '📍 Use current location'}
+      {locating ? $t('mapPicker.locating') : $t('mapPicker.useCurrentLocation')}
     </button>
     {#if location}
-      <button type="button" onclick={clearLocation}>Clear location</button>
+      <button type="button" onclick={clearLocation}>{$t('mapPicker.clearLocation')}</button>
     {/if}
   </div>
   {#if error}<p class="muted" style="color: var(--danger)">{error}</p>{/if}

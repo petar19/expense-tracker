@@ -6,6 +6,7 @@
   import { expenses } from '../../lib/stores/expenses';
   import { filterExpenses } from '../../lib/utils/stats';
   import { expenseImportFileSchema } from '../../lib/utils/validation';
+  import { t } from '../../lib/i18n';
 
   let from = $state('');
   let to = $state('');
@@ -44,7 +45,9 @@
       const json = JSON.parse(text);
       const result = expenseImportFileSchema.safeParse(json);
       if (!result.success) {
-        importResult = `Invalid file: ${result.error.issues[0]?.message ?? 'schema mismatch'}`;
+        importResult = $t('exportImport.invalidFile', {
+          message: result.error.issues[0]?.message ?? $t('exportImport.schemaMismatch'),
+        });
         return;
       }
 
@@ -65,9 +68,9 @@
         await batch.commit();
       }
 
-      importResult = `Imported ${toImport.length} expenses (${skippedCount} already existed, skipped).`;
+      importResult = $t('exportImport.importResult', { count: toImport.length, skipped: skippedCount });
     } catch (err) {
-      importResult = `Failed: ${err instanceof Error ? err.message : String(err)}`;
+      importResult = $t('exportImport.importFailed', { error: err instanceof Error ? err.message : String(err) });
     } finally {
       importing = false;
       input.value = '';
@@ -76,27 +79,24 @@
 </script>
 
 <div class="page stack">
-  <h2>Export / Import</h2>
+  <h2>{$t('exportImport.title')}</h2>
 
   {#if !$activeGroup}
-    <p class="muted">Pick an active group first.</p>
+    <p class="muted">{$t('exportImport.pickGroup')}</p>
   {:else}
     <div class="card stack">
-      <h3 style="margin:0">Export</h3>
-      <p class="muted">Leave dates blank to export everything.</p>
+      <h3 style="margin:0">{$t('exportImport.exportTitle')}</h3>
+      <p class="muted">{$t('exportImport.exportHint')}</p>
       <div class="row">
-        <label>From <input type="date" bind:value={from} /></label>
-        <label>To <input type="date" bind:value={to} /></label>
+        <label>{$t('stats.from')} <input type="date" bind:value={from} /></label>
+        <label>{$t('stats.to')} <input type="date" bind:value={to} /></label>
       </div>
-      <button class="primary" onclick={handleExport}>Download JSON</button>
+      <button class="primary" onclick={handleExport}>{$t('exportImport.download')}</button>
     </div>
 
     <div class="card stack">
-      <h3 style="margin:0">Import</h3>
-      <p class="muted">
-        Upload a JSON file previously exported from this app. Expenses whose id
-        already exists in this group are skipped.
-      </p>
+      <h3 style="margin:0">{$t('exportImport.importTitle')}</h3>
+      <p class="muted">{$t('exportImport.importHint')}</p>
       <input type="file" accept=".json" onchange={handleImportFile} disabled={importing} />
       {#if importResult}<p class="muted">{importResult}</p>{/if}
     </div>

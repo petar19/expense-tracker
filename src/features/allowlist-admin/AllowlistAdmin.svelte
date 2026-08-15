@@ -9,6 +9,7 @@
   } from 'firebase/firestore';
   import { db } from '../../lib/firebase';
   import { currentUser } from '../../lib/stores/auth';
+  import { t } from '../../lib/i18n';
 
   interface Entry {
     email: string;
@@ -33,7 +34,7 @@
     error = '';
     const email = newEmail.trim().toLowerCase();
     if (!email || !email.includes('@')) {
-      error = 'Enter a valid email address';
+      error = $t('allowlist.invalidEmail');
       return;
     }
     try {
@@ -41,43 +42,40 @@
       newEmail = '';
       newRole = 'user';
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to add';
+      error = e instanceof Error ? e.message : $t('allowlist.addFailed');
     }
   }
 
   async function removeEntry(email: string) {
     if (email === $currentUser?.email?.toLowerCase()) {
-      error = "You can't remove yourself";
+      error = $t('allowlist.cantRemoveSelf');
       return;
     }
-    if (!confirm(`Remove ${email}?`)) return;
+    if (!confirm($t('allowlist.removeConfirm', { email }))) return;
     try {
       await deleteDoc(doc(db, 'allowedUsers', email));
     } catch (e) {
-      error = e instanceof Error ? e.message : 'Failed to remove';
+      error = e instanceof Error ? e.message : $t('allowlist.removeFailed');
     }
   }
 </script>
 
 <div class="page stack">
-  <h2>Allowed users</h2>
-  <p class="muted">
-    Only Google accounts listed here can sign in. Admins can also manage this
-    list.
-  </p>
+  <h2>{$t('allowlist.title')}</h2>
+  <p class="muted">{$t('allowlist.description')}</p>
 
   <div class="card stack">
     <form class="row" onsubmit={(e) => { e.preventDefault(); addEntry(); }}>
       <input
         type="email"
-        placeholder="name@example.com"
+        placeholder={$t('allowlist.emailPlaceholder')}
         bind:value={newEmail}
       />
       <select bind:value={newRole}>
-        <option value="user">user</option>
-        <option value="admin">admin</option>
+        <option value="user">{$t('allowlist.roleUser')}</option>
+        <option value="admin">{$t('allowlist.roleAdmin')}</option>
       </select>
-      <button class="primary" type="submit">Add</button>
+      <button class="primary" type="submit">{$t('allowlist.add')}</button>
     </form>
     {#if error}
       <p class="muted" style="color: var(--danger)">{error}</p>
@@ -89,14 +87,14 @@
       <div class="card row" style="justify-content: space-between">
         <div>
           <strong>{entry.email}</strong>
-          <span class="muted">— {entry.role}</span>
+          <span class="muted">— {entry.role === 'admin' ? $t('allowlist.roleAdmin') : $t('allowlist.roleUser')}</span>
         </div>
         <button class="danger" onclick={() => removeEntry(entry.email)}>
-          Remove
+          {$t('allowlist.remove')}
         </button>
       </div>
     {:else}
-      <p class="muted">No entries yet.</p>
+      <p class="muted">{$t('allowlist.empty')}</p>
     {/each}
   </div>
 </div>

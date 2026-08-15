@@ -2,6 +2,8 @@
   import { link } from 'svelte-spa-router';
   import active from 'svelte-spa-router/active';
   import { allowedRole, currentUser, signOutUser } from '../stores/auth';
+  import { t } from '../i18n';
+  import LanguagePicker from './LanguagePicker.svelte';
 </script>
 
 <header class="nav card" style="border-radius:0; border-width: 0 0 1px">
@@ -9,23 +11,24 @@
     <div class="row top-row">
       <a href="/" use:link class="brand">💶 Troškovi</a>
       <div class="row user">
+        <LanguagePicker />
         {#if $currentUser?.photoURL}
           <img src={$currentUser.photoURL} alt="" class="avatar" />
         {/if}
         <span class="muted user-email">{$currentUser?.email}</span>
-        <button onclick={signOutUser}>Sign out</button>
+        <button onclick={signOutUser}>{$t('nav.signOut')}</button>
       </div>
     </div>
     <nav>
-      <a href="/" use:link use:active>Expenses</a>
-      <a href="/groups" use:link use:active>Groups</a>
-      <a href="/stats" use:link use:active>Stats</a>
-      <a href="/settleup" use:link use:active>Settle up</a>
-      <a href="/categories" use:link use:active>Categories</a>
-      <a href="/export-import" use:link use:active>Export/Import</a>
+      <a href="/" use:link use:active>{$t('nav.expenses')}</a>
+      <a href="/groups" use:link use:active>{$t('nav.groups')}</a>
+      <a href="/stats" use:link use:active>{$t('nav.stats')}</a>
+      <a href="/settleup" use:link use:active>{$t('nav.settleUp')}</a>
+      <a href="/categories" use:link use:active>{$t('nav.categories')}</a>
+      <a href="/export-import" use:link use:active>{$t('nav.exportImport')}</a>
       {#if $allowedRole === 'admin'}
-        <a href="/admin/allowlist" use:link use:active>Allowlist</a>
-        <a href="/admin/migrate" use:link use:active>Migrate</a>
+        <a href="/admin/allowlist" use:link use:active>{$t('nav.allowlist')}</a>
+        <a href="/admin/migrate" use:link use:active>{$t('nav.migrate')}</a>
       {/if}
     </nav>
   </div>

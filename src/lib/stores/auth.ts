@@ -5,8 +5,9 @@ import {
   signOut,
   type User,
 } from 'firebase/auth';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase';
+import { locale, type Locale } from '../i18n';
 
 export type AllowedRole = 'admin' | 'user';
 
@@ -48,8 +49,19 @@ onAuthStateChanged(auth, async (user) => {
     },
   );
 
+  // Load this user's last-selected language, if they've picked one before.
+  getDoc(doc(db, 'users', user.uid))
+    .then((snap) => {
+      const savedLocale = snap.data()?.locale;
+      if (savedLocale === 'en' || savedLocale === 'hr') locale.set(savedLocale);
+    })
+    .catch(() => {
+      // Ignored: fails silently for non-allowlisted users under the rules, which is fine.
+    });
+
   // Keep a users/{uid} profile doc up to date for other members to look up
-  // display names/emails (e.g. when inviting to a group).
+  // display names/emails (e.g. when inviting to a group). Doesn't touch
+  // `locale` — that's written separately by setUserLocale() below.
   await setDoc(
     doc(db, 'users', user.uid),
     {
@@ -62,6 +74,17 @@ onAuthStateChanged(auth, async (user) => {
     // Ignored: fails silently for non-allowlisted users under the rules, which is fine.
   });
 });
+
+/** Changes the UI language and, if signed in, persists it as this user's
+ * preference so it's restored automatically on their next sign-in/device. */
+export async function setUserLocale(next: Locale) {
+  locale.set(next);
+  const user = auth.currentUser;
+  if (!user) return;
+  // merge (not update): may race the initial profile-doc creation on a
+  // brand-new sign-in, so this must work whether or not the doc exists yet.
+  await setDoc(doc(db, 'users', user.uid), { locale: next }, { merge: true }).catch(() => {});
+}
 
 export async function signInWithGoogle() {
   await signInWithPopup(auth, googleProvider);
