@@ -20,3 +20,8 @@ export const auth = getAuth(app);
 // without this, the Firestore SDK throws instead of just omitting them.
 export const db = initializeFirestore(app, { ignoreUndefinedProperties: true });
 export const googleProvider = new GoogleAuthProvider();
+
+// Public VAPID key for Web Push (Project Settings -> Cloud Messaging -> Web
+// configuration -> "Generate key pair"). Safe to be public, like the config
+// above — it identifies this app to FCM, it isn't a secret.
+export const VAPID_KEY = 'REPLACE_WITH_VAPID_KEY';

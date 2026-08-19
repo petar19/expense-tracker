@@ -217,4 +217,11 @@ export const en: Record<string, string> = {
 
 
   'language.label': 'Language',
+
+  'notifications.title': 'Notifications',
+  'notifications.description': 'Get a push notification when someone else adds an expense to this group.',
+  'notifications.enable': 'Enable notifications',
+  'notifications.disable': 'Disable notifications',
+  'notifications.enabling': 'Enabling…',
+  'notifications.enableFailed': 'Failed to enable: {error}',
 };

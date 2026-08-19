@@ -5,6 +5,14 @@ export interface GroupMember {
   email: string;
 }
 
+// groups/{groupId}/notificationPrefs/{uid} — kept out of the shared `members`
+// map so the security rule can cleanly scope "you may only touch your own
+// preference" without needing to diff one nested key inside a shared field.
+export interface NotificationPref {
+  uid: string;
+  enabled: boolean;
+}
+
 export interface Group {
   id: string;
   name: string;
@@ -37,7 +45,7 @@ export interface Expense {
   subitems: Subitem[];
   createdBy: string;
   createdAt: number;
-  source: 'manual' | 'migrated';
+  source: 'manual' | 'migrated' | 'whatsapp-bot';
 }
 
 export interface Category {

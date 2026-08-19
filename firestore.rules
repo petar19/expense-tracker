@@ -57,7 +57,11 @@ service cloud.firestore {
           // later "-20" message lowering a prior entry) — only exactly-zero is
           // rejected, matching the parser's own validation.
           && request.resource.data.price is number && request.resource.data.price != 0
-          && (request.resource.data.source != 'migrated' || isSiteAdmin());
+          // 'migrated' and 'whatsapp-bot' are only ever meant to be written by
+          // trusted backends (the migration tool, the bot's Admin SDK — which
+          // bypasses rules anyway); this is just a defense-in-depth backstop
+          // against a client faking either source through the normal app.
+          && (request.resource.data.source == 'manual' || isSiteAdmin());
         allow update: if isGroupMember() && validPaidBy();
         allow delete: if isGroupMember();
       }
@@ -75,6 +79,15 @@ service cloud.firestore {
       match /migrationRuns/{runId} {
         function isGroupMember() { return isAllowed() && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members; }
         allow read, write: if isGroupMember() && isSiteAdmin();
+      }
+
+      // Kept separate from the `members` map specifically so this rule can
+      // scope "only your own doc" without needing to diff one nested key
+      // inside a field shared with role/expectedPct/etc.
+      match /notificationPrefs/{uid} {
+        function isGroupMember() { return isAllowed() && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members; }
+        allow read: if isGroupMember();
+        allow write: if isGroupMember() && request.auth.uid == uid;
       }
     }
   }

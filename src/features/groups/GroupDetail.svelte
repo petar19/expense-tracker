@@ -12,6 +12,11 @@
     setMemberExpectedPct,
     setMemberRole,
   } from '../../lib/stores/groups';
+  import {
+    disableNotifications,
+    enableNotifications,
+    notificationPref,
+  } from '../../lib/stores/notifications';
   import UnmappedPayers from './UnmappedPayers.svelte';
 
   let { params }: { params: { groupId: string } } = $props();
@@ -86,6 +91,26 @@
     if (!group) return;
     activeGroupId.set(group.id);
   }
+
+  let notifyBusy = $state(false);
+  let notifyError = $state('');
+
+  async function toggleNotifications() {
+    if (!group) return;
+    notifyError = '';
+    notifyBusy = true;
+    try {
+      if ($notificationPref?.enabled) {
+        await disableNotifications(group.id);
+      } else {
+        await enableNotifications(group.id);
+      }
+    } catch (e) {
+      notifyError = $t('notifications.enableFailed', { error: e instanceof Error ? e.message : String(e) });
+    } finally {
+      notifyBusy = false;
+    }
+  }
 </script>
 
 <div class="page stack">
@@ -150,6 +175,23 @@
           {$t('groupDetail.pctWarning', { pct: pctTotal })}
         </p>
       {/if}
+    </div>
+
+    <div class="card stack">
+      <h3 style="margin:0">{$t('notifications.title')}</h3>
+      <p class="muted">{$t('notifications.description')}</p>
+      <div class="row">
+        <button onclick={toggleNotifications} disabled={notifyBusy}>
+          {#if notifyBusy}
+            {$t('notifications.enabling')}
+          {:else if $notificationPref?.enabled}
+            {$t('notifications.disable')}
+          {:else}
+            {$t('notifications.enable')}
+          {/if}
+        </button>
+      </div>
+      {#if notifyError}<p class="muted" style="color: var(--danger)">{notifyError}</p>{/if}
     </div>
 
     {#if isAdmin}

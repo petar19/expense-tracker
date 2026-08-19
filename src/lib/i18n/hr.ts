@@ -217,4 +217,11 @@ export const hr: Record<string, string> = {
 
 
   'language.label': 'Jezik',
+
+  'notifications.title': 'Obavijesti',
+  'notifications.description': 'Primaj push obavijest kad netko drugi doda trošak u ovu grupu.',
+  'notifications.enable': 'Uključi obavijesti',
+  'notifications.disable': 'Isključi obavijesti',
+  'notifications.enabling': 'Uključivanje…',
+  'notifications.enableFailed': 'Uključivanje nije uspjelo: {error}',
 };

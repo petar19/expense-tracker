@@ -25,7 +25,7 @@ export const expenseImportSchema = z.object({
   subitems: z.array(subitemSchema),
   createdBy: z.string(),
   createdAt: z.number(),
-  source: z.enum(['manual', 'migrated']),
+  source: z.enum(['manual', 'migrated', 'whatsapp-bot']),
 });
 
 export const expenseImportFileSchema = z.array(expenseImportSchema);
