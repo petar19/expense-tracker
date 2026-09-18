@@ -67,3 +67,37 @@ export interface NameAlias {
   names: string[];
   canonicalName: string;
 }
+
+// whatsappIntegrations/{groupId} — doc id is the app group's own id, written
+// by the admin panel and read live by the bot (no restart needed to pick up
+// a change). Managed by that group's admin, not a site admin.
+export interface WhatsAppIntegration {
+  whatsappGroupJid: string | null;
+  senderMap: Record<string, string>;
+  announcementTemplate?: string;
+}
+
+// whatsappGroups/{jid} — every WhatsApp group the bot account can currently
+// see, published by the bot on each connect so an admin can pick one from a
+// dropdown instead of needing a jid from a CLI tool.
+export interface DiscoveredWhatsAppGroup {
+  jid: string;
+  subject: string;
+  lastSeenAt: number;
+}
+
+// whatsappIntegrations/{groupId}/unmappedSenders/{jid} — a WhatsApp sender
+// the bot has seen in this group's linked chat but hasn't been mapped to an
+// app member yet; written by the bot, resolved (and deleted) from the panel.
+export interface UnmappedWhatsAppSender {
+  jid: string;
+  pushName: string;
+  lastSeenAt: number;
+}
+
+// botStatus/whatsapp — a heartbeat the bot refreshes every few minutes so the
+// panel can show it as online/offline without needing to reach the process.
+export interface BotStatus {
+  connected: boolean;
+  lastSeenAt: number;
+}

@@ -18,6 +18,7 @@
     notificationPref,
   } from '../../lib/stores/notifications';
   import UnmappedPayers from './UnmappedPayers.svelte';
+  import WhatsAppBridge from './WhatsAppBridge.svelte';
 
   let { params }: { params: { groupId: string } } = $props();
 
@@ -206,6 +207,8 @@
       </div>
 
       <UnmappedPayers {group} />
+
+      <WhatsAppBridge {group} />
 
       <button class="danger" onclick={handleDelete}>{$t('groupDetail.deleteGroup')}</button>
     {/if}

@@ -27,6 +27,31 @@ service cloud.firestore {
       allow create, update, delete: if isAllowed();
     }
 
+    // Published by the bot (Admin SDK, bypasses rules) on every connect —
+    // clients only ever read these to populate the admin panel.
+    match /whatsappGroups/{jid} {
+      allow read: if isAllowed();
+      allow write: if false;
+    }
+    match /botStatus/{statusId} {
+      allow read: if isAllowed();
+      allow write: if false;
+    }
+
+    // Doc id is the app group's own id — managed by that group's admin, read
+    // live by the bot (a client update takes effect immediately, no restart).
+    match /whatsappIntegrations/{groupId} {
+      function isAdminOfGroup() {
+        return isAllowed()
+          && get(/databases/$(database)/documents/groups/$(groupId)).data.members[request.auth.uid].role == 'admin';
+      }
+      allow read, write: if isAdminOfGroup();
+
+      match /unmappedSenders/{jid} {
+        allow read, write: if isAdminOfGroup();
+      }
+    }
+
     match /groups/{groupId} {
       // Checks memberUids (not the members map) so this matches the array-contains
       // query the app uses to list "my groups" — Firestore can only verify a query
