@@ -34,6 +34,16 @@ export const activeGroup = derived([myGroups, activeGroupId], ([$groups, $id]) =
   return $groups.find((g) => g.id === $id) ?? $groups[0];
 });
 
+// A plain string, unlike activeGroup — Svelte's store equality check treats
+// every object as "changed" no matter what (it can't cheaply deep-compare),
+// so activeGroup emits a new reference on every single myGroups update, even
+// when the resolved group's identity hasn't actually changed (e.g. any write
+// to any group doc fires the listener twice — once optimistic, once
+// server-confirmed). Anything that tears down/rebuilds Firestore listeners
+// based on "did the active group change" (expenses, nameAliases,
+// notifications) must key off this instead, or it re-reads on every no-op.
+export const activeGroupResolvedId = derived(activeGroup, (g) => g?.id ?? null);
+
 // Keep activeGroupId in sync with whatever activeGroup resolves to (e.g. after
 // the previously-active group disappears or on first load).
 activeGroup.subscribe((g) => {

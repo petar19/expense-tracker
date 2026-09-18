@@ -3,7 +3,7 @@ import { arrayUnion, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { getMessaging, getToken, isSupported } from 'firebase/messaging';
 import { app, db, VAPID_KEY } from '../firebase';
 import { currentUser } from './auth';
-import { activeGroup } from './groups';
+import { activeGroupResolvedId } from './groups';
 import type { NotificationPref } from '../types';
 
 export const notificationPref = writable<NotificationPref | null>(null);
@@ -13,18 +13,18 @@ export const notificationPermission = writable<NotificationPermission | 'unsuppo
 
 let unsubPref: (() => void) | null = null;
 
-activeGroup.subscribe((group) => {
+activeGroupResolvedId.subscribe((groupId) => {
   if (unsubPref) {
     unsubPref();
     unsubPref = null;
   }
   const user = get(currentUser);
-  if (!group || !user) {
+  if (!groupId || !user) {
     notificationPref.set(null);
     return;
   }
   unsubPref = onSnapshot(
-    doc(db, 'groups', group.id, 'notificationPrefs', user.uid),
+    doc(db, 'groups', groupId, 'notificationPrefs', user.uid),
     (snap) => {
       notificationPref.set(
         snap.exists() ? (snap.data() as NotificationPref) : { uid: user.uid, enabled: false },

@@ -12,7 +12,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { activeGroup } from './groups';
+import { activeGroupResolvedId } from './groups';
 import { currentUser } from './auth';
 import { normalizeText } from '../utils/normalize';
 import type { Expense, KnownName } from '../types';
@@ -24,7 +24,7 @@ export const knownNames = writable<KnownName[]>([]);
 let unsubExpenses: (() => void) | null = null;
 let unsubKnownNames: (() => void) | null = null;
 
-activeGroup.subscribe((group) => {
+activeGroupResolvedId.subscribe((groupId) => {
   if (unsubExpenses) {
     unsubExpenses();
     unsubExpenses = null;
@@ -34,7 +34,7 @@ activeGroup.subscribe((group) => {
     unsubKnownNames = null;
   }
 
-  if (!group) {
+  if (!groupId) {
     expenses.set([]);
     expensesLoading.set(false);
     knownNames.set([]);
@@ -43,7 +43,7 @@ activeGroup.subscribe((group) => {
 
   expensesLoading.set(true);
   const expensesQuery = query(
-    collection(db, 'groups', group.id, 'expenses'),
+    collection(db, 'groups', groupId, 'expenses'),
     orderBy('date', 'desc'),
   );
   unsubExpenses = onSnapshot(
@@ -58,7 +58,7 @@ activeGroup.subscribe((group) => {
     },
   );
 
-  unsubKnownNames = onSnapshot(collection(db, 'groups', group.id, 'knownNames'), (snap) => {
+  unsubKnownNames = onSnapshot(collection(db, 'groups', groupId, 'knownNames'), (snap) => {
     knownNames.set(
       snap.docs.map((d) => ({ name: d.id, ...(d.data() as Omit<KnownName, 'name'>) })),
     );

@@ -1,23 +1,23 @@
 import { writable } from 'svelte/store';
 import { addDoc, collection, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-import { activeGroup } from './groups';
+import { activeGroupResolvedId } from './groups';
 import type { NameAlias } from '../types';
 
 export const nameAliases = writable<NameAlias[]>([]);
 
 let unsub: (() => void) | null = null;
 
-activeGroup.subscribe((group) => {
+activeGroupResolvedId.subscribe((groupId) => {
   if (unsub) {
     unsub();
     unsub = null;
   }
-  if (!group) {
+  if (!groupId) {
     nameAliases.set([]);
     return;
   }
-  unsub = onSnapshot(collection(db, 'groups', group.id, 'nameAliases'), (snap) => {
+  unsub = onSnapshot(collection(db, 'groups', groupId, 'nameAliases'), (snap) => {
     nameAliases.set(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<NameAlias, 'id'>) })));
   });
 });
