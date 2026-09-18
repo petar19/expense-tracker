@@ -1,3 +1,5 @@
+import { evaluateArithmetic } from '../arithmetic';
+
 export interface ParsedLine {
   lineNumber: number;
   raw: string;
@@ -36,10 +38,10 @@ export interface ParseResult {
 const DATED_LINE = /^(?<date>\d{2}\/\d{2}\/\d{4}),\s(?<time>\d{2}:\d{2})\s-\s(?<spender>.+):\s*(?<place>.+),\s*(?<amount>-?[0-9+.*/\s]+)$/;
 
 // `[24.10.2020., 19:25:00] Petar Lazić: aurelia tjestenina, 57.17`
-const BRACKETED_LINE = /^\[(?<date>\d{2}\.\d{2}\.\d{4})\.,\s(?<time>\d{2}:\d{2}:\d{2})\]\s(?<spender>.+):\s*(?<place>.+),\s*(?<amount>-?[0-9+.]+)$/;
+const BRACKETED_LINE = /^\[(?<date>\d{2}\.\d{2}\.\d{4})\.,\s(?<time>\d{2}:\d{2}:\d{2})\]\s(?<spender>.+):\s*(?<place>.+),\s*(?<amount>-?[0-9+\-*/.\s]+)$/;
 
 // Continuation line, same message as the previous dated line: `dolac, 30+12+12`
-const CONTINUATION_LINE = /^\s*(?<place>.+),\s*(?<amount>-?[0-9+.]+)\s*$/;
+const CONTINUATION_LINE = /^\s*(?<place>.+),\s*(?<amount>-?[0-9+\-*/.\s]+)\s*$/;
 
 // WhatsApp's own placeholder text for a deleted message — never a real
 // expense, safe to auto-skip instead of asking the admin to dismiss each one.
@@ -59,18 +61,13 @@ function toIsoDate(day: string, month: string, year: string): string {
   return `${year}-${month}-${day}`;
 }
 
-/** Sums `+`-joined amounts (e.g. "30+12+12"); the original script's regex also
- * allowed `-`, `*`, `/` but its `eval` call only ever triggered on `+`, so
- * those are deliberately not supported here — same effective behavior. */
+/** Evaluates the amount, which may be a plain number or a small arithmetic
+ * expression (e.g. "30+12+12", "45*5") — safely, via evaluateArithmetic, not
+ * eval(). The original script's regex allowed +, -, *, / but its `eval` call
+ * only ever actually triggered on `+`; this completes that original intent
+ * properly instead of just permitting the characters cosmetically. */
 function parseAmount(raw: string): number | null {
-  const trimmed = raw.trim();
-  if (trimmed.includes('+')) {
-    const parts = trimmed.split('+').map((p) => parseFloat(p.trim()));
-    if (parts.some((p) => Number.isNaN(p))) return null;
-    return parts.reduce((sum, p) => sum + p, 0);
-  }
-  const value = parseFloat(trimmed);
-  return Number.isNaN(value) ? null : value;
+  return evaluateArithmetic(raw.trim());
 }
 
 /** Salvages whatever date/time/spender/place/amount can be read from a line
