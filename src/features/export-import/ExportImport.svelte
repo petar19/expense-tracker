@@ -3,7 +3,7 @@
   import { db } from '../../lib/firebase';
   import { activeGroup } from '../../lib/stores/groups';
   import { currentUser } from '../../lib/stores/auth';
-  import { expenses } from '../../lib/stores/expenses';
+  import { fetchAllExpenses } from '../../lib/stores/expenses';
   import { filterExpenses } from '../../lib/utils/stats';
   import { expenseImportFileSchema } from '../../lib/utils/validation';
   import { t } from '../../lib/i18n';
@@ -12,18 +12,30 @@
   let to = $state('');
   let importResult = $state('');
   let importing = $state(false);
+  let exporting = $state(false);
 
-  function handleExport() {
+  // Export (any date range) and import (which needs every existing id to
+  // dedupe against) both need the group's *complete* history — fetched fresh
+  // here rather than read from the live expenses store, which defaults to a
+  // recent window to save reads and may not have widened yet by the time
+  // either action runs.
+  async function handleExport() {
     if (!$activeGroup) return;
-    const rows = filterExpenses($expenses, { from: from || undefined, to: to || undefined });
-    const blob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const rangeLabel = from || to ? `_${from || 'start'}_to_${to || 'now'}` : '';
-    a.href = url;
-    a.download = `${$activeGroup.name.replace(/\s+/g, '-')}${rangeLabel}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    exporting = true;
+    try {
+      const all = await fetchAllExpenses($activeGroup.id);
+      const rows = filterExpenses(all, { from: from || undefined, to: to || undefined });
+      const blob = new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const rangeLabel = from || to ? `_${from || 'start'}_to_${to || 'now'}` : '';
+      a.href = url;
+      a.download = `${$activeGroup.name.replace(/\s+/g, '-')}${rangeLabel}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      exporting = false;
+    }
   }
 
   function chunk<T>(arr: T[], size: number): T[][] {
@@ -51,7 +63,8 @@
         return;
       }
 
-      const existingIds = new Set($expenses.map((e) => e.id));
+      const allExisting = await fetchAllExpenses($activeGroup.id);
+      const existingIds = new Set(allExisting.map((e) => e.id));
       const toImport = result.data.filter((row) => !existingIds.has(row.id));
       const skippedCount = result.data.length - toImport.length;
 
@@ -91,7 +104,9 @@
         <label>{$t('stats.from')} <input type="date" bind:value={from} /></label>
         <label>{$t('stats.to')} <input type="date" bind:value={to} /></label>
       </div>
-      <button class="primary" onclick={handleExport}>{$t('exportImport.download')}</button>
+      <button class="primary" onclick={handleExport} disabled={exporting}>
+        {exporting ? $t('exportImport.exporting') : $t('exportImport.download')}
+      </button>
     </div>
 
     <div class="card stack">

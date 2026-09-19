@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { activeGroup } from '../../lib/stores/groups';
-  import { expenses } from '../../lib/stores/expenses';
+  import { expenses, loadFullExpenseHistory } from '../../lib/stores/expenses';
   import { filterExpenses } from '../../lib/utils/stats';
   import { computeBalances, simplifyDebts } from '../../lib/utils/debt';
   import { locale, t } from '../../lib/i18n';
@@ -8,6 +9,12 @@
 
   let from = $state('');
   let to = $state('');
+
+  // Settle-up defaults to "all time" (no from/to) — see Stats.svelte for why
+  // this page needs to explicitly widen the live expenses store to match.
+  onMount(() => {
+    loadFullExpenseHistory();
+  });
 
   let currency = $derived(
     new Intl.NumberFormat($locale === 'hr' ? 'hr-HR' : 'en-US', { style: 'currency', currency: 'EUR' }),

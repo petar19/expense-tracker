@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { activeGroup } from '../../lib/stores/groups';
-  import { expenses, knownNames } from '../../lib/stores/expenses';
+  import { expenses, knownNames, loadFullExpenseHistory } from '../../lib/stores/expenses';
   import { categories } from '../../lib/stores/categories';
   import { nameAliases, saveAlias } from '../../lib/stores/nameAliases';
   import { locale, t } from '../../lib/i18n';
@@ -25,6 +26,14 @@
   let search = $state('');
   let sortKey = $state<SortKey>('date-desc');
   let bucket = $state<BucketSize | 'auto'>('auto');
+
+  // Stats analyzes a group's whole history by default (no from/to means "all
+  // time") — the live expenses store defaults to a smaller recent window to
+  // save reads elsewhere, so this page needs to widen it itself rather than
+  // silently charting only what happened to already be loaded.
+  onMount(() => {
+    loadFullExpenseHistory();
+  });
 
   let currency = $derived(
     new Intl.NumberFormat($locale === 'hr' ? 'hr-HR' : 'en-US', { style: 'currency', currency: 'EUR' }),

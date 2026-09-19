@@ -2,7 +2,13 @@
   import { link } from 'svelte-spa-router';
   import { activeGroup, myGroups, myGroupsLoading } from '../../lib/stores/groups';
   import { categories } from '../../lib/stores/categories';
-  import { deleteExpense, expenses, expensesLoading } from '../../lib/stores/expenses';
+  import {
+    deleteExpense,
+    expenses,
+    expensesLoading,
+    expensesRangeStart,
+    loadFullExpenseHistory,
+  } from '../../lib/stores/expenses';
   import { locale, t } from '../../lib/i18n';
   import ExpenseForm from './ExpenseForm.svelte';
   import type { Expense } from '../../lib/types';
@@ -62,6 +68,13 @@
 
     {#if showForm}
       <ExpenseForm group={$activeGroup} expense={editingExpense} onDone={closeForm} />
+    {/if}
+
+    {#if $expensesRangeStart}
+      <div class="row" style="justify-content: space-between">
+        <span class="muted">{$t('expenseList.scopedNotice', { date: $expensesRangeStart })}</span>
+        <button onclick={loadFullExpenseHistory}>{$t('expenseList.loadFullHistory')}</button>
+      </div>
     {/if}
 
     {#if $expensesLoading}
