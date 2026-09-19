@@ -17,6 +17,7 @@ import { db } from '../firebase';
 import { activeGroupResolvedId } from './groups';
 import { currentUser } from './auth';
 import { normalizeText } from '../utils/normalize';
+import { sortByRecency } from '../utils/stats';
 import type { Expense, KnownName } from '../types';
 
 export const expenses = writable<Expense[]>([]);
@@ -91,7 +92,8 @@ expensesSubscriptionKey.subscribe(() => {
   unsubExpenses = onSnapshot(
     expensesQuery,
     (snap) => {
-      expenses.set(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Expense, 'id'>) })));
+      const docs = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Expense, 'id'>) }));
+      expenses.set(sortByRecency(docs));
       expensesLoading.set(false);
     },
     () => {

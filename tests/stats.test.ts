@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { aggregateByCategory, aggregateBySpender, filterExpenses, sortExpenses } from '../src/lib/utils/stats';
+import {
+  aggregateByCategory,
+  aggregateBySpender,
+  filterExpenses,
+  sortByRecency,
+  sortExpenses,
+} from '../src/lib/utils/stats';
 import type { Expense } from '../src/lib/types';
 
 function makeExpense(overrides: Partial<Expense>): Expense {
@@ -50,6 +56,33 @@ describe('sortExpenses', () => {
   it('sorts by price descending', () => {
     const expenses = [makeExpense({ price: 1 }), makeExpense({ price: 5 }), makeExpense({ price: 3 })];
     expect(sortExpenses(expenses, 'price-desc').map((e) => e.price)).toEqual([5, 3, 1]);
+  });
+});
+
+describe('sortByRecency', () => {
+  it('sorts by date descending', () => {
+    const expenses = [
+      makeExpense({ id: 'a', date: '2024-01-01', createdAt: 1 }),
+      makeExpense({ id: 'b', date: '2024-03-01', createdAt: 1 }),
+      makeExpense({ id: 'c', date: '2024-02-01', createdAt: 1 }),
+    ];
+    expect(sortByRecency(expenses).map((e) => e.id)).toEqual(['b', 'c', 'a']);
+  });
+
+  it('breaks same-day ties by createdAt, newest first — a just-added expense lands on top', () => {
+    const expenses = [
+      makeExpense({ id: 'old', date: '2024-05-01', createdAt: 1000 }),
+      makeExpense({ id: 'older', date: '2024-05-01', createdAt: 500 }),
+      makeExpense({ id: 'brand-new', date: '2024-05-01', createdAt: 2000 }),
+    ];
+    expect(sortByRecency(expenses).map((e) => e.id)).toEqual(['brand-new', 'old', 'older']);
+  });
+
+  it('does not mutate the input array', () => {
+    const expenses = [makeExpense({ id: 'a', date: '2024-01-01' }), makeExpense({ id: 'b', date: '2024-02-01' })];
+    const original = [...expenses];
+    sortByRecency(expenses);
+    expect(expenses).toEqual(original);
   });
 });
 

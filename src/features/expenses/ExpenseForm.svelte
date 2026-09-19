@@ -4,6 +4,7 @@
   import { addExpense, knownNames, updateExpense } from '../../lib/stores/expenses';
   import { suggestCategories, AUTO_CHECK_THRESHOLD } from '../../lib/utils/categorize';
   import { normalizeText } from '../../lib/utils/normalize';
+  import { computePerItemPrice, computeTotalPrice } from '../../lib/utils/pricing';
   import { t } from '../../lib/i18n';
   import MapPicker from '../../lib/components/MapPicker.svelte';
   import type { Expense, ExpenseLocation, Group, Subitem } from '../../lib/types';
@@ -18,7 +19,12 @@
 
   let name = $state(expense?.name ?? '');
   let description = $state(expense?.description ?? '');
-  let price = $state(expense ? String(expense.price) : '');
+  // The price field is always "per item" — the total that actually gets
+  // saved is price × itemCount (see totalPrice below), so buying several of
+  // the same thing doesn't require doing that multiplication by hand.
+  // Editing an existing expense has to reverse that, since expense.price is
+  // already the saved total.
+  let price = $state(expense ? String(computePerItemPrice(expense.price, expense.itemCount)) : '');
   let itemCount = $state(expense?.itemCount ? String(expense.itemCount) : '');
   let paidBy = $state(expense?.paidBy ?? $currentUser?.uid ?? '');
   let date = $state(expense?.date ?? today);
@@ -31,6 +37,12 @@
   let categoriesTouched = $state(Boolean(expense));
 
   let subitemsTotal = $derived(subitems.reduce((sum, s) => sum + s.price * (s.count ?? 1), 0));
+  let parsedItemCount = $derived(itemCount ? parseInt(itemCount, 10) : 1);
+  let totalPrice = $derived.by(() => {
+    const priceNum = parseFloat(price);
+    if (Number.isNaN(priceNum)) return null;
+    return computeTotalPrice(priceNum, parsedItemCount);
+  });
 
   function addSubitem() {
     subitems = [...subitems, { name: '', price: 0, count: undefined }];
@@ -83,7 +95,7 @@
       const data = {
         name: name.trim(),
         description: description.trim() || undefined,
-        price: priceNum,
+        price: totalPrice ?? priceNum,
         itemCount: itemCount ? parseInt(itemCount, 10) : undefined,
         paidBy,
         categories: selectedCategories,
@@ -137,6 +149,9 @@
       <input type="number" min="1" bind:value={itemCount} />
     </label>
   </div>
+  {#if parsedItemCount > 1 && totalPrice !== null}
+    <p class="muted">{$t('expenseForm.totalPrice', { total: totalPrice.toFixed(2) })}</p>
+  {/if}
 
   <div class="row">
     <label style="flex:1">

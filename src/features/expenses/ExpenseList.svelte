@@ -66,8 +66,8 @@
       <button class="primary" onclick={startAdd}>{$t('expenseList.addExpense')}</button>
     </div>
 
-    {#if showForm}
-      <ExpenseForm group={$activeGroup} expense={editingExpense} onDone={closeForm} />
+    {#if showForm && !editingExpense}
+      <ExpenseForm group={$activeGroup} expense={null} onDone={closeForm} />
     {/if}
 
     {#if $expensesRangeStart}
@@ -84,36 +84,40 @@
     {:else}
       <div class="stack">
         {#each $expenses as expense (expense.id)}
-          <div class="card stack">
-            <div class="row" style="justify-content: space-between">
-              <div>
-                <strong>{expense.name}</strong>
-                {#if expense.description}
-                  <span class="muted"> — {expense.description}</span>
-                {/if}
+          {#if editingExpense?.id === expense.id}
+            <ExpenseForm group={$activeGroup} expense={editingExpense} onDone={closeForm} />
+          {:else}
+            <div class="card stack">
+              <div class="row" style="justify-content: space-between">
+                <div>
+                  <strong>{expense.name}</strong>
+                  {#if expense.description}
+                    <span class="muted"> — {expense.description}</span>
+                  {/if}
+                </div>
+                <strong>{currency.format(expense.price)}</strong>
               </div>
-              <strong>{currency.format(expense.price)}</strong>
-            </div>
-            <div class="row muted">
-              <span>{expense.date}</span>
-              <span>· {$t('expenseList.paidBy', { name: memberName(expense.paidBy) })}</span>
-              {#if expense.itemCount}<span>· {$t('expenseList.items', { count: expense.itemCount })}</span>{/if}
-              {#if expense.subitems.length > 0}<span>· {$t('expenseList.subitems', { count: expense.subitems.length })}</span>{/if}
-              {#if expense.location}<span>· {$t('expenseList.location')}</span>{/if}
-              {#if expense.source === 'migrated'}<span>· {$t('expenseList.migrated')}</span>{/if}
-            </div>
-            {#if expense.categories.length > 0}
+              <div class="row muted">
+                <span>{expense.date}</span>
+                <span>· {$t('expenseList.paidBy', { name: memberName(expense.paidBy) })}</span>
+                {#if expense.itemCount}<span>· {$t('expenseList.items', { count: expense.itemCount })}</span>{/if}
+                {#if expense.subitems.length > 0}<span>· {$t('expenseList.subitems', { count: expense.subitems.length })}</span>{/if}
+                {#if expense.location}<span>· {$t('expenseList.location')}</span>{/if}
+                {#if expense.source === 'migrated'}<span>· {$t('expenseList.migrated')}</span>{/if}
+              </div>
+              {#if expense.categories.length > 0}
+                <div class="row">
+                  {#each expense.categories as catId (catId)}
+                    <span class="muted card" style="padding: 0.1em 0.6em">{categoryName(catId)}</span>
+                  {/each}
+                </div>
+              {/if}
               <div class="row">
-                {#each expense.categories as catId (catId)}
-                  <span class="muted card" style="padding: 0.1em 0.6em">{categoryName(catId)}</span>
-                {/each}
+                <button onclick={() => startEdit(expense)}>{$t('common.edit')}</button>
+                <button class="danger" onclick={() => handleDelete(expense)}>{$t('common.delete')}</button>
               </div>
-            {/if}
-            <div class="row">
-              <button onclick={() => startEdit(expense)}>{$t('common.edit')}</button>
-              <button class="danger" onclick={() => handleDelete(expense)}>{$t('common.delete')}</button>
             </div>
-          </div>
+          {/if}
         {/each}
       </div>
     {/if}

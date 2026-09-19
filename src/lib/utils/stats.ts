@@ -10,6 +10,16 @@ export interface ExpenseFilters {
   search?: string; // matched against name + description
 }
 
+// `date` is day-granularity, so sorting by it alone leaves same-day expenses
+// in an arbitrary tiebreak order — a freshly-added expense could land
+// anywhere among today's entries instead of at the top. createdAt (a real
+// timestamp) breaks the tie, newest first.
+export function sortByRecency(expenses: Expense[]): Expense[] {
+  return [...expenses].sort((a, b) =>
+    a.date === b.date ? b.createdAt - a.createdAt : a.date < b.date ? 1 : -1,
+  );
+}
+
 export function filterExpenses(expenses: Expense[], filters: ExpenseFilters): Expense[] {
   return expenses.filter((e) => {
     if (filters.from && e.date < filters.from) return false;
