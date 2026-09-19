@@ -1,6 +1,10 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { initializeFirestore } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from 'firebase/firestore';
 
 // Firebase web config is public by design — access control lives in Firestore
 // Security Rules (firestore.rules), not in hiding these values.
@@ -18,7 +22,16 @@ export const auth = getAuth(app);
 // ignoreUndefinedProperties: optional fields (description, itemCount, a
 // subitem's count, etc.) are left as `undefined` when a form field is blank —
 // without this, the Firestore SDK throws instead of just omitting them.
-export const db = initializeFirestore(app, { ignoreUndefinedProperties: true });
+//
+// persistentLocalCache + persistentMultipleTabManager: caches documents in
+// IndexedDB so a page reload (or a second tab) resumes from the local cache
+// and only pulls deltas, instead of re-reading an entire group's expense
+// history from scratch every time — the historical migration group alone is
+// ~3,600 documents, so this materially affects daily read quota.
+export const db = initializeFirestore(app, {
+  ignoreUndefinedProperties: true,
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+});
 export const googleProvider = new GoogleAuthProvider();
 
 // Public VAPID key for Web Push (Project Settings -> Cloud Messaging -> Web
