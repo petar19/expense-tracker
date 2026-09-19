@@ -1,10 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import {
-  initializeFirestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
-} from 'firebase/firestore';
+import { initializeFirestore } from 'firebase/firestore';
 
 // Firebase web config is public by design — access control lives in Firestore
 // Security Rules (firestore.rules), not in hiding these values.
@@ -23,15 +19,13 @@ export const auth = getAuth(app);
 // subitem's count, etc.) are left as `undefined` when a form field is blank —
 // without this, the Firestore SDK throws instead of just omitting them.
 //
-// persistentLocalCache + persistentMultipleTabManager: caches documents in
-// IndexedDB so a page reload (or a second tab) resumes from the local cache
-// and only pulls deltas, instead of re-reading an entire group's expense
-// history from scratch every time — the historical migration group alone is
-// ~3,600 documents, so this materially affects daily read quota.
-export const db = initializeFirestore(app, {
-  ignoreUndefinedProperties: true,
-  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-});
+// NOTE: persistentLocalCache + persistentMultipleTabManager was tried here to
+// cut re-read cost, but caused live updates to silently stop reaching an open
+// tab after a while (new expenses stopped appearing without a full reload) —
+// reverted. The read-cost problem is instead addressed by scoping the
+// expenses query to a date range (see stores/expenses.ts) rather than
+// caching the unbounded query.
+export const db = initializeFirestore(app, { ignoreUndefinedProperties: true });
 export const googleProvider = new GoogleAuthProvider();
 
 // Public VAPID key for Web Push (Project Settings -> Cloud Messaging -> Web
