@@ -5,6 +5,7 @@
   import { suggestCategories, AUTO_CHECK_THRESHOLD } from '../../lib/utils/categorize';
   import { normalizeText } from '../../lib/utils/normalize';
   import { computePerItemPrice, computeTotalPrice } from '../../lib/utils/pricing';
+  import { todayIso } from '../../lib/utils/date';
   import { t } from '../../lib/i18n';
   import MapPicker from '../../lib/components/MapPicker.svelte';
   import type { Expense, ExpenseLocation, Group, Subitem } from '../../lib/types';
@@ -15,7 +16,7 @@
     onDone,
   }: { group: Group; expense?: Expense | null; onDone: () => void } = $props();
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
 
   let name = $state(expense?.name ?? '');
   let description = $state(expense?.description ?? '');
