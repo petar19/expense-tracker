@@ -7,6 +7,7 @@ import Migration from '../features/migration/Migration.svelte';
 import ExportImport from '../features/export-import/ExportImport.svelte';
 import AllowlistAdmin from '../features/allowlist-admin/AllowlistAdmin.svelte';
 import CategoryAdmin from '../features/categories/CategoryAdmin.svelte';
+import ChatFolderAdmin from '../features/chat-folders/ChatFolderAdmin.svelte';
 
 export const routes = {
   '/': ExpenseList,
@@ -17,5 +18,6 @@ export const routes = {
   '/categories': CategoryAdmin,
   '/admin/allowlist': AllowlistAdmin,
   '/admin/migrate': Migration,
+  '/admin/chat-folders': ChatFolderAdmin,
   '/export-import': ExportImport,
 };

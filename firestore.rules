@@ -52,6 +52,14 @@ service cloud.firestore {
       }
     }
 
+    // A generic "this WhatsApp chat's photos go in that local folder"
+    // pairing, unrelated to any specific expense group — exposes a raw
+    // filesystem path on the bot's machine, so site-admin only rather than
+    // any group admin (unlike whatsappIntegrations above).
+    match /chatFolderMappings/{id} {
+      allow read, write: if isSiteAdmin();
+    }
+
     match /groups/{groupId} {
       // Checks memberUids (not the members map) so this matches the array-contains
       // query the app uses to list "my groups" — Firestore can only verify a query

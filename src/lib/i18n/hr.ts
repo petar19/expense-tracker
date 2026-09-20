@@ -18,6 +18,7 @@ export const hr: Record<string, string> = {
   'nav.exportImport': 'Izvoz/Uvoz',
   'nav.allowlist': 'Dopušteni korisnici',
   'nav.migrate': 'Migracija',
+  'nav.chatFolders': 'Mape razgovora',
   'nav.signOut': 'Odjava',
 
   'login.title': 'Troškovi',
@@ -96,6 +97,15 @@ export const hr: Record<string, string> = {
   'whatsappBridge.noGroupsDiscovered': 'Bot još nije pronašao nijednu WhatsApp grupu. Provjeri je li online i je li član grupe koju želiš povezati.',
   'whatsappBridge.chooseGroup': '— odaberi WhatsApp grupu —',
   'whatsappBridge.link': 'Poveži',
+
+  'chatFolders.title': 'Mape razgovora',
+  'chatFolders.description': 'Spremaj svaku fotografiju iz WhatsApp razgovora izravno u mapu na računalu na kojem radi bot — npr. za obiteljski razgovor "računi", nepovezano s bilo kojom grupom troškova. Ništa se ovdje ne analizira niti bilježi kao trošak.',
+  'chatFolders.addTitle': 'Dodaj povezivanje',
+  'chatFolders.chooseGroup': 'WhatsApp razgovor',
+  'chatFolders.folderPath': 'Putanja mape (na botovom računalu)',
+  'chatFolders.label': 'Naziv',
+  'chatFolders.allGroupsMapped': 'Svaki pronađeni WhatsApp razgovor već je povezan.',
+  'chatFolders.removeConfirm': 'Prestati spremati fotografije iz ovog razgovora u ovu mapu?',
 
   'expenseList.noGroupsTitle': 'Još nema grupa',
   'expenseList.noGroupsBody': 'Stvori grupu za praćenje zajedničkih troškova.',

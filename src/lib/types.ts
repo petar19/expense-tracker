@@ -101,3 +101,15 @@ export interface BotStatus {
   connected: boolean;
   lastSeenAt: number;
 }
+
+// chatFolderMappings/{id} — a generic "this WhatsApp chat's photos get saved
+// to that local folder on the bot's machine" pairing, independent of the
+// expense-group mappings above (e.g. a family "bills" chat with no
+// expense-tracker group of its own). Site-admin only: it exposes a raw
+// filesystem path on the host machine, not scoped to any expense group.
+export interface ChatFolderMapping {
+  id: string;
+  whatsappGroupJid: string;
+  folderPath: string;
+  label?: string;
+}

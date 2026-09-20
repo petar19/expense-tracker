@@ -29,6 +29,7 @@
       {#if $allowedRole === 'admin'}
         <a href="/admin/allowlist" use:link use:active>{$t('nav.allowlist')}</a>
         <a href="/admin/migrate" use:link use:active>{$t('nav.migrate')}</a>
+        <a href="/admin/chat-folders" use:link use:active>{$t('nav.chatFolders')}</a>
       {/if}
     </nav>
   </div>

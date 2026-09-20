@@ -18,6 +18,7 @@ export const en: Record<string, string> = {
   'nav.exportImport': 'Export/Import',
   'nav.allowlist': 'Allowlist',
   'nav.migrate': 'Migrate',
+  'nav.chatFolders': 'Chat Folders',
   'nav.signOut': 'Sign out',
 
   'login.title': 'Expense Tracker',
@@ -96,6 +97,15 @@ export const en: Record<string, string> = {
   'whatsappBridge.noGroupsDiscovered': 'The bot hasn\'t discovered any WhatsApp groups yet. Make sure it\'s online and a member of the group you want to link.',
   'whatsappBridge.chooseGroup': '— choose a WhatsApp group —',
   'whatsappBridge.link': 'Link',
+
+  'chatFolders.title': 'Chat Folders',
+  'chatFolders.description': 'Save every photo from a WhatsApp chat straight to a folder on the machine running the bot — for things like a family "bills" chat, unrelated to any expense group. Nothing here is analyzed or logged as an expense.',
+  'chatFolders.addTitle': 'Add a mapping',
+  'chatFolders.chooseGroup': 'WhatsApp chat',
+  'chatFolders.folderPath': 'Folder path (on the bot\'s machine)',
+  'chatFolders.label': 'Label',
+  'chatFolders.allGroupsMapped': 'Every discovered WhatsApp chat is already mapped.',
+  'chatFolders.removeConfirm': 'Stop saving photos from this chat to this folder?',
 
   'expenseList.noGroupsTitle': 'No groups yet',
   'expenseList.noGroupsBody': 'Create a group to start tracking shared expenses.',
