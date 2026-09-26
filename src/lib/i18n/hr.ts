@@ -22,7 +22,7 @@ export const hr: Record<string, string> = {
   'nav.admin': 'Admin',
   'nav.signOut': 'Odjava',
 
-  'login.title': 'Troškovi',
+  'login.title': 'HouseOps',
   'login.subtitle': 'Prijavi se Google računom koji koristi tvoja grupa.',
   'login.signIn': 'Prijava putem Googlea',
   'login.signingIn': 'Prijava u tijeku…',

@@ -15,7 +15,7 @@
 <header class="nav card" style="border-radius:0; border-width: 0 0 1px">
   <div class="nav-inner">
     <div class="row top-row">
-      <a href="/" use:link class="brand">💶</a>
+      <a href="/" use:link class="brand">🏠 HouseOps</a>
       <div class="row user">
         <LanguagePicker />
         {#if $allowedRole === 'admin'}

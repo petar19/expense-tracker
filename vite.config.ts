@@ -4,7 +4,7 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/expense-tracker/',
+  base: '/house-ops/',
   plugins: [svelte()],
   test: {
     environment: 'node',

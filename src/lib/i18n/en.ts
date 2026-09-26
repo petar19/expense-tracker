@@ -22,7 +22,7 @@ export const en: Record<string, string> = {
   'nav.admin': 'Admin',
   'nav.signOut': 'Sign out',
 
-  'login.title': 'Expense Tracker',
+  'login.title': 'HouseOps',
   'login.subtitle': 'Sign in with the Google account your group uses.',
   'login.signIn': 'Sign in with Google',
   'login.signingIn': 'Signing in…',
