@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import { collection, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
   import { db } from '../../lib/firebase';
   import { allowedRole } from '../../lib/stores/auth';
@@ -36,7 +35,13 @@
     return discoveredGroups.find((g) => g.jid === jid)?.subject ?? jid;
   }
 
-  onMount(() => {
+  // $effect (not onMount) because this component stays mounted when the
+  // Settings tab's active group changes (Svelte reuses the instance rather
+  // than recreating it) — onMount only runs once and would keep this
+  // subscription pointed at whichever group.id it saw first, showing the
+  // wrong group's data until a full page reload forced a remount.
+  $effect(() => {
+    const groupId = group.id;
     if (!isSiteAdmin) {
       loading = false;
       return;
@@ -49,7 +54,7 @@
         discoveredGroups = snap.docs.map((d) => d.data() as DiscoveredWhatsAppGroup);
       }),
       onSnapshot(
-        doc(db, 'photoSavingConfig', group.id),
+        doc(db, 'photoSavingConfig', groupId),
         (snap) => {
           config = snap.exists() ? (snap.data() as PhotoSavingConfig) : null;
           folderPathDraft = config?.folderPath ?? '';

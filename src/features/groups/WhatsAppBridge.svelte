@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import {
     collection,
     deleteDoc,
@@ -43,7 +42,13 @@
     return discoveredGroups.find((g) => g.jid === jid)?.subject ?? jid;
   }
 
-  onMount(() => {
+  // $effect (not onMount) because this component stays mounted when the
+  // Settings tab's active group changes (Svelte reuses the instance rather
+  // than recreating it) — onMount only runs once and would keep these
+  // subscriptions pointed at whichever group.id it saw first, showing the
+  // wrong group's data until a full page reload forced a remount.
+  $effect(() => {
+    const groupId = group.id;
     const unsubs = [
       onSnapshot(doc(db, 'botStatus', 'whatsapp'), (snap) => {
         botStatus = snap.exists() ? (snap.data() as BotStatus) : null;
@@ -52,7 +57,7 @@
         discoveredGroups = snap.docs.map((d) => d.data() as DiscoveredWhatsAppGroup);
       }),
       onSnapshot(
-        doc(db, 'whatsappIntegrations', group.id),
+        doc(db, 'whatsappIntegrations', groupId),
         (snap) => {
           integration = snap.exists() ? (snap.data() as WhatsAppIntegration) : null;
           templateDraft = integration?.announcementTemplate ?? '';
@@ -62,7 +67,7 @@
           loading = false;
         },
       ),
-      onSnapshot(collection(db, 'whatsappIntegrations', group.id, 'unmappedSenders'), (snap) => {
+      onSnapshot(collection(db, 'whatsappIntegrations', groupId, 'unmappedSenders'), (snap) => {
         unmappedSenders = snap.docs.map((d) => d.data() as UnmappedWhatsAppSender);
       }),
     ];
