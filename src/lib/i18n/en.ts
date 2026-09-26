@@ -19,6 +19,7 @@ export const en: Record<string, string> = {
   'nav.exportImport': 'Export/Import',
   'nav.allowlist': 'Allowlist',
   'nav.migrate': 'Migrate',
+  'nav.admin': 'Admin',
   'nav.signOut': 'Sign out',
 
   'login.title': 'Expense Tracker',

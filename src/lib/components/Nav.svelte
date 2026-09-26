@@ -6,14 +6,21 @@
   import { t } from '../i18n';
   import LanguagePicker from './LanguagePicker.svelte';
   import GroupSwitcher from './GroupSwitcher.svelte';
+  import Modal from './Modal.svelte';
+  import AdminPanel from '../../features/admin/AdminPanel.svelte';
+
+  let adminOpen = $state(false);
 </script>
 
 <header class="nav card" style="border-radius:0; border-width: 0 0 1px">
   <div class="nav-inner">
     <div class="row top-row">
-      <a href="/" use:link class="brand">💶 Troškovi</a>
+      <a href="/" use:link class="brand">💶</a>
       <div class="row user">
         <LanguagePicker />
+        {#if $allowedRole === 'admin'}
+          <button onclick={() => (adminOpen = true)} title={$t('nav.admin')} aria-label={$t('nav.admin')}>⚙️</button>
+        {/if}
         {#if $currentUser?.photoURL}
           <img src={$currentUser.photoURL} alt="" class="avatar" />
         {/if}
@@ -36,13 +43,17 @@
       {/if}
       <a href="/categories" use:link use:active>{$t('nav.categories')}</a>
       <a href="/export-import" use:link use:active>{$t('nav.exportImport')}</a>
-      {#if $allowedRole === 'admin'}
-        <a href="/admin/allowlist" use:link use:active>{$t('nav.allowlist')}</a>
-        <a href="/admin/migrate" use:link use:active>{$t('nav.migrate')}</a>
-      {/if}
     </nav>
   </div>
 </header>
+
+{#if $allowedRole === 'admin'}
+  <Modal open={adminOpen} onClose={() => (adminOpen = false)} title={$t('nav.admin')}>
+    {#snippet children()}
+      <AdminPanel />
+    {/snippet}
+  </Modal>
+{/if}
 
 <style>
   .nav-inner {

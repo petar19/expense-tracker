@@ -19,6 +19,7 @@ export const hr: Record<string, string> = {
   'nav.exportImport': 'Izvoz/Uvoz',
   'nav.allowlist': 'Dopušteni korisnici',
   'nav.migrate': 'Migracija',
+  'nav.admin': 'Admin',
   'nav.signOut': 'Odjava',
 
   'login.title': 'Troškovi',
