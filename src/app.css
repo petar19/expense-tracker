@@ -86,12 +86,21 @@ button:disabled {
   cursor: not-allowed;
 }
 
-input, select, textarea {
+input:not([type='checkbox']):not([type='radio']), select, textarea {
   border: 1px solid var(--border);
   background: var(--surface);
   border-radius: var(--radius);
   padding: 0.5em 0.7em;
   width: 100%;
+}
+
+/* A checkbox/radio stretched to width:100% by the rule above keeps its native
+   size but its layout box (and so its position within a flex row) fills the
+   whole row, shoving the visible box away from its label instead of sitting
+   right next to it. */
+input[type='checkbox'], input[type='radio'] {
+  width: auto;
+  flex: 0 0 auto;
 }
 
 .card {
