@@ -13,11 +13,22 @@ export interface NotificationPref {
   enabled: boolean;
 }
 
+// Cheap booleans purely deciding which tabs/sections show for this group —
+// the actual config for an enabled capability lives in its own collection
+// (whatsappIntegrations, photoSavingConfig below), same pattern either way,
+// so permission rules stay simple and per-collection instead of needing
+// field-level rules on this one document.
+export interface GroupCapabilities {
+  expenses: boolean;
+  photoSaving: boolean;
+}
+
 export interface Group {
   id: string;
   name: string;
   members: Record<string, GroupMember>;
   memberUids: string[];
+  capabilities: GroupCapabilities;
 }
 
 export interface Subitem {
@@ -102,14 +113,38 @@ export interface BotStatus {
   lastSeenAt: number;
 }
 
-// chatFolderMappings/{id} — a generic "this WhatsApp chat's photos get saved
-// to that local folder on the bot's machine" pairing, independent of the
-// expense-group mappings above (e.g. a family "bills" chat with no
-// expense-tracker group of its own). Site-admin only: it exposes a raw
-// filesystem path on the host machine, not scoped to any expense group.
-export interface ChatFolderMapping {
-  id: string;
-  whatsappGroupJid: string;
+// photoSavingConfig/{groupId} — doc id is the app group's own id, same
+// pattern as WhatsAppIntegration above. Config for a group's "Photo saving"
+// capability: which WhatsApp chat's photos get saved to which local folder,
+// and whether the OCR watcher should sort them. Site-admin only (unlike
+// WhatsAppIntegration): it exposes a raw filesystem path on the bot's
+// machine, which a plain group admin isn't necessarily trusted with.
+export interface PhotoSavingConfig {
+  whatsappGroupJid: string | null;
   folderPath: string;
-  label?: string;
+  ocrEnabled: boolean;
+  ocrInstruction?: string;
+}
+
+// groups/{groupId}/documents/{id} — a lightweight summary of one OCR'd
+// receipt/bill, written by the OCR watcher (Admin SDK, bypasses rules).
+// Deliberately excludes the full OCR text, which stays local-only next to
+// the image — nothing here needs to search/display it.
+export interface DocumentRecord {
+  id: string;
+  vendor: string;
+  date: string | null;
+  amount: number | null;
+  category: string | null;
+  sourceFile: string;
+  processedAt: string;
+}
+
+// groups/{groupId}/documentVendors/{vendorSlug} — one doc per vendor
+// "folder", same aggregate pattern as KnownName above, so the Documents tab
+// can list vendors cheaply without loading every document up front.
+export interface DocumentVendor {
+  displayName: string;
+  count: number;
+  lastDocumentAt: string;
 }

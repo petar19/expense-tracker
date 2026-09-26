@@ -52,11 +52,13 @@ service cloud.firestore {
       }
     }
 
-    // A generic "this WhatsApp chat's photos go in that local folder"
-    // pairing, unrelated to any specific expense group — exposes a raw
+    // Doc id is the app group's own id, same pattern as whatsappIntegrations
+    // above — a group's "Photo saving" capability config. Exposes a raw
     // filesystem path on the bot's machine, so site-admin only rather than
-    // any group admin (unlike whatsappIntegrations above).
-    match /chatFolderMappings/{id} {
+    // any group admin (confirmed: stricter than whatsappIntegrations on
+    // purpose, since a group admin isn't necessarily trusted with the host
+    // machine's filesystem).
+    match /photoSavingConfig/{groupId} {
       allow read, write: if isSiteAdmin();
     }
 
@@ -121,6 +123,21 @@ service cloud.firestore {
         function isGroupMember() { return isAllowed() && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members; }
         allow read: if isGroupMember();
         allow write: if isGroupMember() && request.auth.uid == uid;
+      }
+
+      // Written only by the OCR watcher (Admin SDK, bypasses rules) — the
+      // Documents tab's lightweight per-receipt summaries (no full OCR text;
+      // that stays local-only) and the per-vendor aggregate counts that let
+      // it list "folders" without loading every document up front.
+      match /documents/{id} {
+        function isGroupMember() { return isAllowed() && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members; }
+        allow read: if isGroupMember();
+        allow write: if false;
+      }
+      match /documentVendors/{vendorSlug} {
+        function isGroupMember() { return isAllowed() && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members; }
+        allow read: if isGroupMember();
+        allow write: if false;
       }
     }
   }

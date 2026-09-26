@@ -3,12 +3,12 @@
   import { currentUser } from '../../lib/stores/auth';
   import { t } from '../../lib/i18n';
   import {
-    activeGroupId,
+    activeGroup,
     deleteGroup,
     inviteMemberByEmail,
-    myGroups,
     removeMember,
     renameGroup,
+    setGroupCapabilities,
     setMemberExpectedPct,
     setMemberRole,
   } from '../../lib/stores/groups';
@@ -19,10 +19,9 @@
   } from '../../lib/stores/notifications';
   import UnmappedPayers from './UnmappedPayers.svelte';
   import WhatsAppBridge from './WhatsAppBridge.svelte';
+  import PhotoSavingSettings from './PhotoSavingSettings.svelte';
 
-  let { params }: { params: { groupId: string } } = $props();
-
-  let group = $derived($myGroups.find((g) => g.id === params.groupId) ?? null);
+  let group = $derived($activeGroup);
   let isAdmin = $derived(
     group && $currentUser ? group.members[$currentUser.uid]?.role === 'admin' : false,
   );
@@ -85,12 +84,12 @@
     if (!group) return;
     if (!confirm($t('groupDetail.deleteConfirm', { name: group.name }))) return;
     await deleteGroup(group.id);
-    push('/groups');
+    push('/');
   }
 
-  function setActive() {
+  async function toggleCapability(key: 'expenses' | 'photoSaving') {
     if (!group) return;
-    activeGroupId.set(group.id);
+    await setGroupCapabilities(group, { ...group.capabilities, [key]: !group.capabilities[key] });
   }
 
   let notifyBusy = $state(false);
@@ -133,13 +132,19 @@
       {/if}
     </div>
 
-    <div class="row">
-      {#if $activeGroupId === group.id}
-        <span class="muted">{$t('groupDetail.activeGroup')}</span>
-      {:else}
-        <button onclick={setActive}>{$t('groupDetail.setActive')}</button>
-      {/if}
-    </div>
+    {#if isAdmin}
+      <div class="card stack">
+        <h3 style="margin:0">{$t('groupDetail.capabilities')}</h3>
+        <label class="row">
+          <input type="checkbox" checked={group.capabilities.expenses} onchange={() => toggleCapability('expenses')} />
+          {$t('groups.capabilityExpenses')}
+        </label>
+        <label class="row">
+          <input type="checkbox" checked={group.capabilities.photoSaving} onchange={() => toggleCapability('photoSaving')} />
+          {$t('groups.capabilityPhotoSaving')}
+        </label>
+      </div>
+    {/if}
 
     <div class="card stack">
       <h3 style="margin:0">{$t('groupDetail.members')}</h3>
@@ -152,13 +157,15 @@
           </div>
           {#if isAdmin}
             <div class="row">
-              <input
-                type="number"
-                style="width:5em"
-                value={member.expectedPct}
-                onchange={(e) => handlePctChange(uid, (e.target as HTMLInputElement).value)}
-              />
-              <span class="muted">%</span>
+              {#if group.capabilities.expenses}
+                <input
+                  type="number"
+                  style="width:5em"
+                  value={member.expectedPct}
+                  onchange={(e) => handlePctChange(uid, (e.target as HTMLInputElement).value)}
+                />
+                <span class="muted">%</span>
+              {/if}
               <button onclick={() => handleRoleToggle(uid, member.role === 'admin')}>
                 {member.role === 'admin' ? $t('groupDetail.makeMember') : $t('groupDetail.makeAdmin')}
               </button>
@@ -166,34 +173,36 @@
                 <button class="danger" onclick={() => handleRemove(uid)}>{$t('common.remove')}</button>
               {/if}
             </div>
-          {:else}
+          {:else if group.capabilities.expenses}
             <span class="muted">{member.expectedPct}%</span>
           {/if}
         </div>
       {/each}
-      {#if Math.abs(pctTotal - 100) > 0.01}
+      {#if group.capabilities.expenses && Math.abs(pctTotal - 100) > 0.01}
         <p class="muted" style="color: var(--danger)">
           {$t('groupDetail.pctWarning', { pct: pctTotal })}
         </p>
       {/if}
     </div>
 
-    <div class="card stack">
-      <h3 style="margin:0">{$t('notifications.title')}</h3>
-      <p class="muted">{$t('notifications.description')}</p>
-      <div class="row">
-        <button onclick={toggleNotifications} disabled={notifyBusy}>
-          {#if notifyBusy}
-            {$t('notifications.enabling')}
-          {:else if $notificationPref?.enabled}
-            {$t('notifications.disable')}
-          {:else}
-            {$t('notifications.enable')}
-          {/if}
-        </button>
+    {#if group.capabilities.expenses}
+      <div class="card stack">
+        <h3 style="margin:0">{$t('notifications.title')}</h3>
+        <p class="muted">{$t('notifications.description')}</p>
+        <div class="row">
+          <button onclick={toggleNotifications} disabled={notifyBusy}>
+            {#if notifyBusy}
+              {$t('notifications.enabling')}
+            {:else if $notificationPref?.enabled}
+              {$t('notifications.disable')}
+            {:else}
+              {$t('notifications.enable')}
+            {/if}
+          </button>
+        </div>
+        {#if notifyError}<p class="muted" style="color: var(--danger)">{notifyError}</p>{/if}
       </div>
-      {#if notifyError}<p class="muted" style="color: var(--danger)">{notifyError}</p>{/if}
-    </div>
+    {/if}
 
     {#if isAdmin}
       <div class="card stack">
@@ -206,9 +215,14 @@
         {#if error}<p class="muted" style="color: var(--danger)">{error}</p>{/if}
       </div>
 
-      <UnmappedPayers {group} />
+      {#if group.capabilities.expenses}
+        <UnmappedPayers {group} />
+        <WhatsAppBridge {group} />
+      {/if}
 
-      <WhatsAppBridge {group} />
+      {#if group.capabilities.photoSaving}
+        <PhotoSavingSettings {group} />
+      {/if}
 
       <button class="danger" onclick={handleDelete}>{$t('groupDetail.deleteGroup')}</button>
     {/if}

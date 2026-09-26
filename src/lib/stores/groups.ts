@@ -14,7 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { currentUser } from './auth';
-import type { Group, GroupMember } from '../types';
+import type { Group, GroupCapabilities, GroupMember } from '../types';
 
 export const myGroups = writable<Group[]>([]);
 export const myGroupsLoading = writable(true);
@@ -67,7 +67,14 @@ currentUser.subscribe((user) => {
   unsubGroups = onSnapshot(
     q,
     (snap) => {
-      myGroups.set(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Group, 'id'>) })));
+      myGroups.set(
+        snap.docs.map((d) => {
+          const data = d.data() as Omit<Group, 'id'>;
+          // Pre-existing groups predate the capabilities field — default to
+          // "expenses only", matching what every group was before this.
+          return { id: d.id, ...data, capabilities: data.capabilities ?? { expenses: true, photoSaving: false } };
+        }),
+      );
       myGroupsLoading.set(false);
     },
     (err) => {
@@ -82,7 +89,7 @@ function equalSplit(count: number): number {
   return count === 0 ? 0 : Math.round((100 / count) * 100) / 100;
 }
 
-export async function createGroup(name: string): Promise<string> {
+export async function createGroup(name: string, capabilities: GroupCapabilities): Promise<string> {
   const user = get(currentUser);
   if (!user || !user.email) throw new Error('Not signed in');
   const member: GroupMember = {
@@ -95,8 +102,13 @@ export async function createGroup(name: string): Promise<string> {
     name,
     members: { [user.uid]: member },
     memberUids: [user.uid],
+    capabilities,
   });
   return ref.id;
+}
+
+export async function setGroupCapabilities(group: Group, capabilities: GroupCapabilities): Promise<void> {
+  await updateDoc(doc(db, 'groups', group.id), { capabilities });
 }
 
 export async function inviteMemberByEmail(group: Group, rawEmail: string): Promise<void> {

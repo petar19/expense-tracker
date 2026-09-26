@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { link } from 'svelte-spa-router';
   import { activeGroup, myGroups, myGroupsLoading } from '../../lib/stores/groups';
   import { categories } from '../../lib/stores/categories';
   import {
@@ -58,7 +57,6 @@
     <div class="center-screen">
       <h2>{$t('expenseList.noGroupsTitle')}</h2>
       <p class="muted">{$t('expenseList.noGroupsBody')}</p>
-      <a href="/groups" use:link><button class="primary">{$t('expenseList.goToGroups')}</button></a>
     </div>
   {:else if $activeGroup}
     <div class="row" style="justify-content: space-between">

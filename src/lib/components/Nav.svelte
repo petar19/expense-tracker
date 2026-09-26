@@ -2,8 +2,10 @@
   import { link } from 'svelte-spa-router';
   import active from 'svelte-spa-router/active';
   import { allowedRole, currentUser, signOutUser } from '../stores/auth';
+  import { activeGroup } from '../stores/groups';
   import { t } from '../i18n';
   import LanguagePicker from './LanguagePicker.svelte';
+  import GroupSwitcher from './GroupSwitcher.svelte';
 </script>
 
 <header class="nav card" style="border-radius:0; border-width: 0 0 1px">
@@ -19,17 +21,24 @@
         <button onclick={signOutUser}>{$t('nav.signOut')}</button>
       </div>
     </div>
+    <GroupSwitcher />
     <nav>
-      <a href="/" use:link use:active>{$t('nav.expenses')}</a>
-      <a href="/groups" use:link use:active>{$t('nav.groups')}</a>
-      <a href="/stats" use:link use:active>{$t('nav.stats')}</a>
-      <a href="/settleup" use:link use:active>{$t('nav.settleUp')}</a>
+      {#if $activeGroup?.capabilities.expenses}
+        <a href="/" use:link use:active>{$t('nav.expenses')}</a>
+        <a href="/stats" use:link use:active>{$t('nav.stats')}</a>
+        <a href="/settleup" use:link use:active>{$t('nav.settleUp')}</a>
+      {/if}
+      {#if $activeGroup?.capabilities.photoSaving}
+        <a href="/documents" use:link use:active>{$t('nav.documents')}</a>
+      {/if}
+      {#if $activeGroup}
+        <a href="/settings" use:link use:active>{$t('nav.settings')}</a>
+      {/if}
       <a href="/categories" use:link use:active>{$t('nav.categories')}</a>
       <a href="/export-import" use:link use:active>{$t('nav.exportImport')}</a>
       {#if $allowedRole === 'admin'}
         <a href="/admin/allowlist" use:link use:active>{$t('nav.allowlist')}</a>
         <a href="/admin/migrate" use:link use:active>{$t('nav.migrate')}</a>
-        <a href="/admin/chat-folders" use:link use:active>{$t('nav.chatFolders')}</a>
       {/if}
     </nav>
   </div>
