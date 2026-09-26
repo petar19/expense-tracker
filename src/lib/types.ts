@@ -126,16 +126,17 @@ export interface PhotoSavingConfig {
   ocrInstruction?: string;
 }
 
-// groups/{groupId}/documents/{id} — a lightweight summary of one OCR'd
-// receipt/bill, written by the OCR watcher (Admin SDK, bypasses rules).
-// Deliberately excludes the full OCR text, which stays local-only next to
-// the image — nothing here needs to search/display it.
+// groups/{groupId}/documents/{id} — a summary of one OCR'd receipt/bill,
+// written by the OCR watcher (Admin SDK, bypasses rules). Includes the full
+// OCR text — cheap to store (Firestore bills per-write, not per-byte) and
+// cheap to show (the Documents tab only ever fetches these on demand).
 export interface DocumentRecord {
   id: string;
   vendor: string;
   date: string | null;
   amount: number | null;
   category: string | null;
+  fullText: string;
   sourceFile: string;
   processedAt: string;
 }

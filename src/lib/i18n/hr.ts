@@ -238,6 +238,7 @@ export const hr: Record<string, string> = {
   'documents.backToVendors': 'Natrag',
   'documents.empty': 'Ovdje još ništa nema.',
   'documents.unknownDate': 'Nepoznat datum',
+  'documents.noText': 'Nema izdvojenog teksta.',
   'documents.vendorCount': '{count} dokument(a)',
 
   'monthPicker.prevMonth': 'Prethodni mjesec',

@@ -14,6 +14,7 @@
   let selectedVendor = $state<string | null>(null);
   let documents = $state<DocumentRecord[] | null>(null);
   let documentsLoading = $state(false);
+  let expandedId = $state<string | null>(null);
   let error = $state('');
 
   let currency = $derived(
@@ -73,6 +74,11 @@
   function backToVendors() {
     selectedVendor = null;
     documents = null;
+    expandedId = null;
+  }
+
+  function toggleExpanded(id: string) {
+    expandedId = expandedId === id ? null : id;
   }
 </script>
 
@@ -95,13 +101,22 @@
     {:else if documents}
       <div class="stack">
         {#each documents as doc (doc.id)}
-          <div class="card row" style="justify-content: space-between">
-            <div>
-              <strong>{doc.date ?? $t('documents.unknownDate')}</strong>
-              {#if doc.category}<span class="muted"> · {doc.category}</span>{/if}
-              <div class="muted">{doc.sourceFile}</div>
-            </div>
-            <strong>{doc.amount !== null ? currency.format(doc.amount) : '—'}</strong>
+          <div class="card stack">
+            <button
+              class="row"
+              style="justify-content: space-between; text-align:left; background:none; border:none; padding:0"
+              onclick={() => toggleExpanded(doc.id)}
+            >
+              <div>
+                <strong>{doc.date ?? $t('documents.unknownDate')}</strong>
+                {#if doc.category}<span class="muted"> · {doc.category}</span>{/if}
+                <div class="muted">{doc.sourceFile}</div>
+              </div>
+              <strong>{doc.amount !== null ? currency.format(doc.amount) : '—'}</strong>
+            </button>
+            {#if expandedId === doc.id}
+              <p class="muted" style="white-space: pre-wrap; margin:0">{doc.fullText || $t('documents.noText')}</p>
+            {/if}
           </div>
         {/each}
       </div>

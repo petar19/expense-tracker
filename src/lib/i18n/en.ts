@@ -238,6 +238,7 @@ export const en: Record<string, string> = {
   'documents.backToVendors': 'Back',
   'documents.empty': 'Nothing here yet.',
   'documents.unknownDate': 'Unknown date',
+  'documents.noText': 'No text extracted.',
   'documents.vendorCount': '{count} document(s)',
 
   'monthPicker.prevMonth': 'Previous month',
