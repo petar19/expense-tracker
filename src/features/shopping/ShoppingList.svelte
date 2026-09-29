@@ -27,7 +27,11 @@
   );
 
   let newName = $state('');
-  let newInterval = $state('');
+  // A number-typed <input type="number"> bind:value coerces to an actual
+  // number (or undefined when empty) at runtime regardless of what you
+  // declare — declaring this as a string would silently break the moment
+  // someone typed a digit (e.g. calling .trim() on a number).
+  let newInterval = $state<number | undefined>(undefined);
   let error = $state('');
   let adding = $state(false);
 
@@ -36,24 +40,23 @@
     const name = newName.trim();
     if (!name) return;
     error = '';
+    if (newInterval !== undefined && (Number.isNaN(newInterval) || newInterval <= 0)) {
+      error = $t('shopping.invalidInterval');
+      return;
+    }
     adding = true;
     try {
-      const intervalDays = newInterval.trim() ? parseInt(newInterval, 10) : null;
-      if (newInterval.trim() && (Number.isNaN(intervalDays) || (intervalDays ?? 0) <= 0)) {
-        error = $t('shopping.invalidInterval');
-        return;
-      }
       await addDoc(collection(db, 'groups', $activeGroup.id, 'shoppingItems'), {
         name,
         active: true,
-        restockIntervalDays: intervalDays,
+        restockIntervalDays: newInterval ? Math.round(newInterval) : null,
         lastBoughtAt: null,
         addedAt: Date.now(),
         reminderId: null,
         source: 'manual',
       });
       newName = '';
-      newInterval = '';
+      newInterval = undefined;
     } catch (e) {
       error = e instanceof Error ? e.message : $t('shopping.addFailed');
     } finally {

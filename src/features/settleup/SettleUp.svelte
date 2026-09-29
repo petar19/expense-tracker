@@ -7,6 +7,7 @@
   import { expenses, loadFullExpenseHistory } from '../../lib/stores/expenses';
   import { filterExpenses } from '../../lib/utils/stats';
   import { applyDebts, computeBalances, simplifyDebts } from '../../lib/utils/debt';
+  import { todayIso } from '../../lib/utils/date';
   import { locale, t } from '../../lib/i18n';
   import MonthPicker from '../../lib/components/MonthPicker.svelte';
   import type { Debt } from '../../lib/types';
@@ -74,14 +75,16 @@
 
   let newCreditor = $state('');
   let newDebtor = $state('');
-  let newAmount = $state('');
+  // Declared number-typed, matching what a number <input>'s bind:value
+  // actually assigns at runtime regardless of declared type (undefined when
+  // empty) — declaring this as a string would silently misbehave.
+  let newAmount = $state<number | undefined>(undefined);
   let newDescription = $state('');
   let debtError = $state('');
   let addingDebt = $state(false);
 
   async function handleAddDebt() {
     if (!$activeGroup || !$currentUser) return;
-    const amount = parseFloat(newAmount);
     debtError = '';
     if (!newCreditor || !newDebtor) {
       debtError = $t('debts.pickBoth');
@@ -91,7 +94,7 @@
       debtError = $t('debts.samePerson');
       return;
     }
-    if (Number.isNaN(amount) || amount <= 0) {
+    if (newAmount === undefined || Number.isNaN(newAmount) || newAmount <= 0) {
       debtError = $t('debts.invalidAmount');
       return;
     }
@@ -101,9 +104,9 @@
       await addDoc(collection(db, 'groups', $activeGroup.id, 'debts'), {
         creditorUid: newCreditor,
         debtorUid: newDebtor,
-        amount,
+        amount: newAmount,
         ...(description ? { description } : {}),
-        date: new Date().toISOString().slice(0, 10),
+        date: todayIso(),
         settled: false,
         createdBy: $currentUser.uid,
         createdAt: Date.now(),
@@ -111,7 +114,7 @@
       });
       newCreditor = '';
       newDebtor = '';
-      newAmount = '';
+      newAmount = undefined;
       newDescription = '';
     } catch (e) {
       debtError = e instanceof Error ? e.message : $t('debts.addFailed');
