@@ -195,6 +195,11 @@ export interface Reminder {
   createdAt: number;
   lastSentAt?: number | null;
   lastMessageId?: string | null;
+  // Set when someone reacts to the WhatsApp reminder message — purely an
+  // informational ack for now, doesn't change the schedule (see the bot's
+  // recordReminderAck in whatsappBot.ts).
+  lastAck?: string | null;
+  lastAckAt?: number | null;
   source: 'app' | 'whatsapp-bot';
 }
 

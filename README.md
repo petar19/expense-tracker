@@ -14,6 +14,15 @@ A group's Settings tab (site-admin only for anything touching the bot's filesyst
 
 Site-wide settings (who's allowed to sign in, running a one-off WhatsApp-export migration) live in the admin panel — the gear icon next to the language picker, admin accounts only.
 
+## Reminders
+
+Not tied to a group's capability checklist, since a personal reminder isn't tied to a group at all — the **Reminders** tab is always visible and covers two kinds:
+
+- **Personal**: a one-off or recurring nudge DMed to you (or someone else in a household group, if you set one for them) over WhatsApp — see the bot repo for how it resolves who to DM.
+- **Group**: shared, visible/manageable by any member, delivered to that group's linked WhatsApp chat.
+
+Once you're on WhatsApp, you can also react to a reminder (an ack — doesn't change its schedule) or reply **`postpone N`** to push it out N days. The **Shopping list** capability builds directly on this: a recurring item schedules its own reminder rather than the bot needing to know anything about shopping lists specifically.
+
 ## Setup
 
 ```bash

@@ -7,6 +7,14 @@
         { "fieldPath": "paidBy", "order": "ASCENDING" },
         { "fieldPath": "date", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "reminders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "nextTriggerAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [

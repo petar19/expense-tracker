@@ -5,11 +5,15 @@ import SettleUp from '../features/settleup/SettleUp.svelte';
 import ExportImport from '../features/export-import/ExportImport.svelte';
 import CategoryAdmin from '../features/categories/CategoryAdmin.svelte';
 import Documents from '../features/documents/Documents.svelte';
+import Reminders from '../features/reminders/Reminders.svelte';
+import ShoppingList from '../features/shopping/ShoppingList.svelte';
 
 export const routes = {
   '/': ExpenseList,
   '/settings': Settings,
   '/documents': Documents,
+  '/shopping': ShoppingList,
+  '/reminders': Reminders,
   '/stats': Stats,
   '/settleup': SettleUp,
   '/categories': CategoryAdmin,

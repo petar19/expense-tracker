@@ -38,9 +38,13 @@
       {#if $activeGroup?.capabilities.photoSaving}
         <a href="/documents" use:link use:active>{$t('nav.documents')}</a>
       {/if}
+      {#if $activeGroup?.capabilities.shoppingList}
+        <a href="/shopping" use:link use:active>{$t('nav.shopping')}</a>
+      {/if}
       {#if $activeGroup}
         <a href="/settings" use:link use:active>{$t('nav.settings')}</a>
       {/if}
+      <a href="/reminders" use:link use:active>{$t('nav.reminders')}</a>
       <a href="/categories" use:link use:active>{$t('nav.categories')}</a>
       <a href="/export-import" use:link use:active>{$t('nav.exportImport')}</a>
     </nav>
