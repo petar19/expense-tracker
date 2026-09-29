@@ -1,11 +1,15 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { activeGroup } from '../../lib/stores/groups';
+  import { addDoc, collection, deleteDoc, doc, onSnapshot, updateDoc } from 'firebase/firestore';
+  import { db } from '../../lib/firebase';
+  import { activeGroup, activeGroupResolvedId } from '../../lib/stores/groups';
+  import { currentUser } from '../../lib/stores/auth';
   import { expenses, loadFullExpenseHistory } from '../../lib/stores/expenses';
   import { filterExpenses } from '../../lib/utils/stats';
-  import { computeBalances, simplifyDebts } from '../../lib/utils/debt';
+  import { applyDebts, computeBalances, simplifyDebts } from '../../lib/utils/debt';
   import { locale, t } from '../../lib/i18n';
   import MonthPicker from '../../lib/components/MonthPicker.svelte';
+  import type { Debt } from '../../lib/types';
 
   let from = $state('');
   let to = $state('');
@@ -36,11 +40,95 @@
       : [],
   );
 
-  let balances = $derived(computeBalances(memberInputs, subsetTotal));
+  // Debts are a standing balance, not a per-period line item — every
+  // unsettled one is folded in regardless of the from/to range above (see
+  // applyDebts). Live-subscribed (not on-demand like Documents) since this
+  // page also lets you settle/delete debts right here, and the balance below
+  // should update immediately when that happens.
+  let debts = $state<Debt[]>([]);
+  let activeDebts = $derived(debts.filter((d) => !d.settled));
+
+  $effect(() => {
+    const groupId = $activeGroupResolvedId;
+    if (!groupId) {
+      debts = [];
+      return;
+    }
+    const unsub = onSnapshot(collection(db, 'groups', groupId, 'debts'), (snap) => {
+      debts = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Debt, 'id'>) }));
+    });
+    return unsub;
+  });
+
+  let balances = $derived(
+    applyDebts(
+      computeBalances(memberInputs, subsetTotal),
+      activeDebts.map((d) => ({ creditorUid: d.creditorUid, debtorUid: d.debtorUid, amount: d.amount })),
+    ),
+  );
   let transfers = $derived(simplifyDebts(balances));
 
   function memberName(uid: string): string {
     return $activeGroup?.members[uid]?.displayName ?? uid;
+  }
+
+  let newCreditor = $state('');
+  let newDebtor = $state('');
+  let newAmount = $state('');
+  let newDescription = $state('');
+  let debtError = $state('');
+  let addingDebt = $state(false);
+
+  async function handleAddDebt() {
+    if (!$activeGroup || !$currentUser) return;
+    const amount = parseFloat(newAmount);
+    debtError = '';
+    if (!newCreditor || !newDebtor) {
+      debtError = $t('debts.pickBoth');
+      return;
+    }
+    if (newCreditor === newDebtor) {
+      debtError = $t('debts.samePerson');
+      return;
+    }
+    if (Number.isNaN(amount) || amount <= 0) {
+      debtError = $t('debts.invalidAmount');
+      return;
+    }
+    addingDebt = true;
+    try {
+      const description = newDescription.trim();
+      await addDoc(collection(db, 'groups', $activeGroup.id, 'debts'), {
+        creditorUid: newCreditor,
+        debtorUid: newDebtor,
+        amount,
+        ...(description ? { description } : {}),
+        date: new Date().toISOString().slice(0, 10),
+        settled: false,
+        createdBy: $currentUser.uid,
+        createdAt: Date.now(),
+        source: 'manual',
+      });
+      newCreditor = '';
+      newDebtor = '';
+      newAmount = '';
+      newDescription = '';
+    } catch (e) {
+      debtError = e instanceof Error ? e.message : $t('debts.addFailed');
+    } finally {
+      addingDebt = false;
+    }
+  }
+
+  async function toggleSettled(debt: Debt) {
+    if (!$activeGroup) return;
+    await updateDoc(doc(db, 'groups', $activeGroup.id, 'debts', debt.id), { settled: !debt.settled });
+  }
+
+  async function removeDebt(debt: Debt) {
+    if (!$activeGroup) return;
+    if (!confirm($t('debts.deleteConfirm'))) return;
+    await deleteDoc(doc(db, 'groups', $activeGroup.id, 'debts', debt.id));
   }
 </script>
 
@@ -89,6 +177,47 @@
           </div>
         {/each}
       {/if}
+    </div>
+
+    <div class="card stack">
+      <h3 style="margin:0">{$t('debts.title')}</h3>
+      <p class="muted">{$t('debts.description')}</p>
+      {#if activeDebts.length === 0}
+        <p class="muted">{$t('debts.empty')}</p>
+      {:else}
+        {#each activeDebts as debt (debt.id)}
+          <div class="row" style="justify-content: space-between">
+            <span>
+              {memberName(debt.debtorUid)} → {memberName(debt.creditorUid)}: {currency.format(debt.amount)}
+              {#if debt.description}<span class="muted"> — {debt.description}</span>{/if}
+            </span>
+            <div class="row">
+              <button onclick={() => toggleSettled(debt)}>{$t('debts.markSettled')}</button>
+              <button class="danger" onclick={() => removeDebt(debt)}>{$t('common.remove')}</button>
+            </div>
+          </div>
+        {/each}
+      {/if}
+
+      <form class="row" onsubmit={(e) => { e.preventDefault(); handleAddDebt(); }}>
+        <select bind:value={newDebtor}>
+          <option value="">{$t('debts.debtorPlaceholder')}</option>
+          {#each Object.entries($activeGroup.members) as [uid, member] (uid)}
+            <option value={uid}>{member.displayName}</option>
+          {/each}
+        </select>
+        <span class="muted">{$t('debts.owes')}</span>
+        <select bind:value={newCreditor}>
+          <option value="">{$t('debts.creditorPlaceholder')}</option>
+          {#each Object.entries($activeGroup.members) as [uid, member] (uid)}
+            <option value={uid}>{member.displayName}</option>
+          {/each}
+        </select>
+        <input type="number" step="0.01" placeholder={$t('debts.amountPlaceholder')} bind:value={newAmount} style="width:6em" />
+        <input placeholder={$t('debts.descriptionPlaceholder')} bind:value={newDescription} />
+        <button class="primary" type="submit" disabled={addingDebt}>{$t('common.add')}</button>
+      </form>
+      {#if debtError}<p class="muted" style="color: var(--danger)">{debtError}</p>{/if}
     </div>
   {/if}
 </div>

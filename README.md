@@ -6,8 +6,9 @@ A household management app — started as shared expense tracking, now covers re
 
 A **group** is a named container with a checklist of enabled capabilities — not every group needs every feature:
 
-- **Expenses**: members, percentage-based expected shares, a linked WhatsApp chat for logging `name, amount` messages as expenses, stats, and settle-up ("who owes whom").
+- **Expenses**: members, percentage-based expected shares, a linked WhatsApp chat for logging `name, amount` messages as expenses, stats, and settle-up ("who owes whom"). Settle-up also folds in direct **debts** — an "X owes Y" balance added from the Settle up tab or via `@name, amount` in the linked chat (see the bot repo) — which stay active regardless of date range until marked settled.
 - **Photo saving**: a linked WhatsApp chat whose photos get saved to a folder on the machine running the bot — e.g. a family "bills" chat, or a "Trip" group with no expense tracking at all. An OCR toggle (Gemini-powered, run by a separate script — see the bot repo) sorts photos into vendor-named folders and extracts vendor/date/amount/category into the app's **Documents** tab.
+- **Shopping list**: a flat per-group list of items, each optionally set to recur every N days (a plain manual number for now, no usage-based learning) — see the **Reminders** section below for how a due item nudges the group.
 
 A group's Settings tab (site-admin only for anything touching the bot's filesystem) is where all of this is configured — pick a WhatsApp chat, a folder, toggle OCR, customize its extraction instruction. The active group is picked from the switcher in the nav; which tabs show up depends on that group's enabled capabilities.
 

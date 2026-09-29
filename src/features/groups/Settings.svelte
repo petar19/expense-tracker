@@ -87,7 +87,7 @@
     push('/');
   }
 
-  async function toggleCapability(key: 'expenses' | 'photoSaving') {
+  async function toggleCapability(key: 'expenses' | 'photoSaving' | 'shoppingList') {
     if (!group) return;
     await setGroupCapabilities(group, { ...group.capabilities, [key]: !group.capabilities[key] });
   }
@@ -142,6 +142,10 @@
         <label class="row">
           <input type="checkbox" checked={group.capabilities.photoSaving} onchange={() => toggleCapability('photoSaving')} />
           {$t('groups.capabilityPhotoSaving')}
+        </label>
+        <label class="row">
+          <input type="checkbox" checked={group.capabilities.shoppingList} onchange={() => toggleCapability('shoppingList')} />
+          {$t('groups.capabilityShoppingList')}
         </label>
       </div>
     {/if}

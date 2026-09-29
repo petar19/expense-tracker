@@ -62,6 +62,26 @@ service cloud.firestore {
       allow read, write: if isSiteAdmin();
     }
 
+    // Personal or group-scoped scheduled nudges delivered over WhatsApp by the
+    // bot (Admin SDK, bypasses rules for the scheduling fields it owns —
+    // nextTriggerAt/status/lastSentAt/lastMessageId). A personal reminder can
+    // be read/managed by whoever created it AND whoever it's aimed at (so one
+    // household member can set a reminder for another); a group reminder is
+    // shared — any member of that group can see and manage it, same trust
+    // level as everything else group-scoped in this app.
+    match /reminders/{reminderId} {
+      function targetUid(data) { return data.scope == 'personal' ? data.get('targetUid', data.ownerUid) : null; }
+      function isGroupMember(gid) { return isAllowed() && request.auth.uid in get(/databases/$(database)/documents/groups/$(gid)).data.members; }
+      function canAccess(data) {
+        return data.scope == 'personal'
+          ? (isAllowed() && (request.auth.uid == data.ownerUid || request.auth.uid == targetUid(data)))
+          : isGroupMember(data.groupId);
+      }
+
+      allow read, update, delete: if canAccess(resource.data);
+      allow create: if request.resource.data.ownerUid == request.auth.uid && canAccess(request.resource.data);
+    }
+
     match /groups/{groupId} {
       // Checks memberUids (not the members map) so this matches the array-contains
       // query the app uses to list "my groups" — Firestore can only verify a query
@@ -138,6 +158,43 @@ service cloud.firestore {
         function isGroupMember() { return isAllowed() && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members; }
         allow read: if isGroupMember();
         allow write: if false;
+      }
+
+      // A direct "X owes Y" balance, independent of the paid-vs-expected-share
+      // math expenses use. Both parties must be current group members — a
+      // debt naming someone outside the group makes no sense since settle-up
+      // only ever resolves balances between members.
+      match /debts/{debtId} {
+        function group() { return get(/databases/$(database)/documents/groups/$(groupId)).data; }
+        function isGroupMember() { return isAllowed() && request.auth.uid in group().members; }
+        function validParties(data) {
+          return data.creditorUid in group().members
+            && data.debtorUid in group().members
+            && data.creditorUid != data.debtorUid;
+        }
+
+        allow read: if isGroupMember();
+        allow create: if isGroupMember()
+          && request.resource.data.createdBy == request.auth.uid
+          && validParties(request.resource.data)
+          && request.resource.data.amount is number && request.resource.data.amount > 0
+          // 'whatsapp-bot' is only ever meant to come from the bot's Admin SDK
+          // (which bypasses rules anyway) — defense-in-depth against a client
+          // faking that source through the normal app, same as expenses.
+          && (request.resource.data.source == 'manual' || isSiteAdmin());
+        allow update: if isGroupMember() && validParties(resource.data);
+        allow delete: if isGroupMember();
+      }
+
+      // The group's "Shopping list" capability — a flat list of items, each
+      // optionally tied to a restock interval (dumb/manual for now: a fixed
+      // number of days set by hand, no usage-based learning). `reminderId`
+      // links to the /reminders doc that nudges the group chat when it's due
+      // again, kept in its own field rather than embedded so the reminder
+      // scheduler (bot) doesn't need to know about shopping items at all.
+      match /shoppingItems/{itemId} {
+        function isGroupMember() { return isAllowed() && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members; }
+        allow read, write: if isGroupMember();
       }
     }
   }

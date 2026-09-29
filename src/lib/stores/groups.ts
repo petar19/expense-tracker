@@ -70,9 +70,18 @@ currentUser.subscribe((user) => {
       myGroups.set(
         snap.docs.map((d) => {
           const data = d.data() as Omit<Group, 'id'>;
-          // Pre-existing groups predate the capabilities field — default to
-          // "expenses only", matching what every group was before this.
-          return { id: d.id, ...data, capabilities: data.capabilities ?? { expenses: true, photoSaving: false } };
+          // Pre-existing groups predate the capabilities field (or predate
+          // shoppingList specifically) — default to "expenses only", matching
+          // what every group was before capabilities existed.
+          return {
+            id: d.id,
+            ...data,
+            capabilities: {
+              expenses: data.capabilities?.expenses ?? true,
+              photoSaving: data.capabilities?.photoSaving ?? false,
+              shoppingList: data.capabilities?.shoppingList ?? false,
+            },
+          };
         }),
       );
       myGroupsLoading.set(false);

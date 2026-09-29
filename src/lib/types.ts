@@ -21,6 +21,7 @@ export interface NotificationPref {
 export interface GroupCapabilities {
   expenses: boolean;
   photoSaving: boolean;
+  shoppingList: boolean;
 }
 
 export interface Group {
@@ -148,4 +149,69 @@ export interface DocumentVendor {
   displayName: string;
   count: number;
   lastDocumentAt: string;
+}
+
+// groups/{groupId}/debts/{id} — a direct "X owes Y" obligation, separate from
+// the paid-vs-expected-share math expenses already do. creditorUid is owed
+// the money, debtorUid owes it. Stays "active" (affects settle-up balances)
+// until settled=true, regardless of date — it's a standing balance, not a
+// per-period line item, so settle-up includes every unsettled debt no matter
+// which date range is picked, on top of expenses within that range.
+// whatsappMessageId lets the bot dedupe/revoke the same way expenses do.
+export interface Debt {
+  id: string;
+  creditorUid: string;
+  debtorUid: string;
+  amount: number;
+  description?: string;
+  date: string; // ISO yyyy-MM-dd, display only — not used to filter into settle-up
+  settled: boolean;
+  createdBy: string;
+  createdAt: number;
+  source: 'manual' | 'whatsapp-bot';
+  whatsappMessageId?: string | null;
+}
+
+// reminders/{id} — top-level (not nested under a group) since a personal
+// reminder isn't tied to any group at all. A group-scoped one is delivered to
+// that group's linked WhatsApp expense chat (whatsappIntegrations), reusing
+// that link rather than adding a second chat-picker; a personal one is
+// delivered as a WhatsApp DM to targetUid's own linked WhatsApp account,
+// resolved from any group's senderMap that happens to mention them (see the
+// bot's findWhatsAppJidForUid) — there's no separate "link your WhatsApp"
+// step, it's inferred from having ever been mapped as an expense sender.
+export interface Reminder {
+  id: string;
+  ownerUid: string;
+  scope: 'personal' | 'group';
+  groupId?: string;
+  targetUid?: string; // personal only; defaults to ownerUid when unset
+  text: string;
+  scheduleType: 'once' | 'recurring';
+  nextTriggerAt: string; // ISO datetime, local time (no timezone conversion — see bot's reminderScheduler.ts)
+  periodUnit?: 'day' | 'week' | 'month';
+  periodAmount?: number;
+  status: 'active' | 'paused' | 'done';
+  createdAt: number;
+  lastSentAt?: number | null;
+  lastMessageId?: string | null;
+  source: 'app' | 'whatsapp-bot';
+}
+
+// groups/{groupId}/shoppingItems/{id} — the "nabava" capability's flat list.
+// restockIntervalDays is the deliberately dumb version of "how often does
+// this run out" (a fixed number the user sets by hand) rather than anything
+// learned from purchase history — reminderId links to the /reminders doc
+// that pings the group chat when it's due, so marking an item bought (which
+// resets lastBoughtAt and the linked reminder's nextTriggerAt) is the one
+// place that needs to know about both collections.
+export interface ShoppingItem {
+  id: string;
+  name: string;
+  active: boolean;
+  restockIntervalDays: number | null;
+  lastBoughtAt: string | null; // ISO yyyy-MM-dd
+  addedAt: number;
+  reminderId: string | null;
+  source: 'manual';
 }

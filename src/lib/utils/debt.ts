@@ -58,3 +58,28 @@ export function computeBalances(members: MemberBalanceInput[], subsetTotal: numb
   }
   return balances;
 }
+
+export interface DebtBalanceInput {
+  creditorUid: string;
+  debtorUid: string;
+  amount: number;
+}
+
+/**
+ * Folds direct "X owes Y" debts into the expense-derived balances above — a
+ * debt isn't tied to a date range like expenses are (it's a standing balance
+ * until settled), so the caller passes every currently-unsettled debt
+ * regardless of whatever from/to range it's using for expenses. Mutates
+ * nothing; returns a new balances map.
+ */
+export function applyDebts(
+  balances: Record<string, number>,
+  debts: DebtBalanceInput[],
+): Record<string, number> {
+  const result = { ...balances };
+  for (const d of debts) {
+    result[d.creditorUid] = (result[d.creditorUid] ?? 0) + d.amount;
+    result[d.debtorUid] = (result[d.debtorUid] ?? 0) - d.amount;
+  }
+  return result;
+}

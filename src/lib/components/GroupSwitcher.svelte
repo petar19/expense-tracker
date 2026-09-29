@@ -6,6 +6,7 @@
   let newName = $state('');
   let newExpenses = $state(true);
   let newPhotoSaving = $state(false);
+  let newShoppingList = $state(false);
   let error = $state('');
   let saving = $state(false);
 
@@ -14,6 +15,7 @@
     newName = '';
     newExpenses = true;
     newPhotoSaving = false;
+    newShoppingList = false;
     error = '';
   }
 
@@ -23,7 +25,11 @@
     error = '';
     saving = true;
     try {
-      const id = await createGroup(name, { expenses: newExpenses, photoSaving: newPhotoSaving });
+      const id = await createGroup(name, {
+        expenses: newExpenses,
+        photoSaving: newPhotoSaving,
+        shoppingList: newShoppingList,
+      });
       activeGroupId.set(id);
       creating = false;
     } catch (e) {
@@ -55,6 +61,7 @@
       <span>{$t('groups.capabilities')}</span>
       <label class="row"><input type="checkbox" bind:checked={newExpenses} /> {$t('groups.capabilityExpenses')}</label>
       <label class="row"><input type="checkbox" bind:checked={newPhotoSaving} /> {$t('groups.capabilityPhotoSaving')}</label>
+      <label class="row"><input type="checkbox" bind:checked={newShoppingList} /> {$t('groups.capabilityShoppingList')}</label>
       {#if error}<p class="muted" style="color: var(--danger)">{error}</p>{/if}
       <div class="row">
         <button class="primary" type="submit" disabled={saving}>{$t('groups.create')}</button>
