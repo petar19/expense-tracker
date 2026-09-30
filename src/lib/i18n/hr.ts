@@ -298,6 +298,7 @@ export const hr: Record<string, string> = {
   'reminders.every': 'Svakih',
   'reminders.everyOne': 'svaki/u {unit}',
   'reminders.everyN': 'svakih {amount} {unit}',
+  'reminders.everyDuration': 'svakih {duration}',
   'reminders.unit.day': 'dan',
   'reminders.unit.week': 'tjedan',
   'reminders.unit.month': 'mjesec',

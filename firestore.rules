@@ -62,24 +62,24 @@ service cloud.firestore {
       allow read, write: if isSiteAdmin();
     }
 
-    // Personal or group-scoped scheduled nudges delivered over WhatsApp by the
-    // bot (Admin SDK, bypasses rules for the scheduling fields it owns —
-    // nextTriggerAt/status/lastSentAt/lastMessageId). A personal reminder can
-    // be read/managed by whoever created it AND whoever it's aimed at (so one
-    // household member can set a reminder for another); a group reminder is
-    // shared — any member of that group can see and manage it, same trust
-    // level as everything else group-scoped in this app.
+    // PERSONAL reminders only — a scheduled WhatsApp nudge DMed to whoever
+    // it's aimed at. Group-scoped ones live at groups/{groupId}/reminders
+    // instead (see below), specifically so their group-membership check can
+    // use the group id from the document's PATH rather than a resource.data
+    // field: Firestore can only treat a list query as provably safe when any
+    // get() calls in the rule resolve from the path/query itself, not from a
+    // per-document field value — this collection sidesteps that entirely by
+    // never needing a group-membership check. (An earlier version of this
+    // rule tried to handle both personal and group reminders in one flat
+    // collection branching on resource.data.scope; every list query against
+    // it came back permission-denied because of exactly this, even though a
+    // single get()-by-id worked fine — which is why it looked fine in an
+    // isolated check but broke the app's actual list queries.)
     match /reminders/{reminderId} {
-      function targetUid(data) { return data.scope == 'personal' ? data.get('targetUid', data.ownerUid) : null; }
-      function isGroupMember(gid) { return isAllowed() && request.auth.uid in get(/databases/$(database)/documents/groups/$(gid)).data.members; }
-      function canAccess(data) {
-        return data.scope == 'personal'
-          ? (isAllowed() && (request.auth.uid == data.ownerUid || request.auth.uid == targetUid(data)))
-          : isGroupMember(data.groupId);
-      }
-
-      allow read, update, delete: if canAccess(resource.data);
-      allow create: if request.resource.data.ownerUid == request.auth.uid && canAccess(request.resource.data);
+      allow read, update, delete: if isAllowed() && (
+        resource.data.ownerUid == request.auth.uid || resource.data.targetUid == request.auth.uid
+      );
+      allow create: if isAllowed() && request.resource.data.ownerUid == request.auth.uid;
     }
 
     match /groups/{groupId} {
@@ -189,10 +189,20 @@ service cloud.firestore {
       // The group's "Shopping list" capability — a flat list of items, each
       // optionally tied to a restock interval (dumb/manual for now: a fixed
       // number of days set by hand, no usage-based learning). `reminderId`
-      // links to the /reminders doc that nudges the group chat when it's due
-      // again, kept in its own field rather than embedded so the reminder
-      // scheduler (bot) doesn't need to know about shopping items at all.
+      // links to a doc in the sibling /reminders subcollection below that
+      // nudges the group chat when it's due again.
       match /shoppingItems/{itemId} {
+        function isGroupMember() { return isAllowed() && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members; }
+        allow read, write: if isGroupMember();
+      }
+
+      // Group-scoped reminders — shared, any member can see/manage one, same
+      // trust level as shoppingItems/knownNames above. Kept separate from the
+      // top-level /reminders collection (personal ones) specifically so this
+      // rule's group-membership check can use $(groupId) from the PATH —
+      // see the long comment on the top-level /reminders match for why that
+      // distinction actually matters here.
+      match /reminders/{reminderId} {
         function isGroupMember() { return isAllowed() && request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.members; }
         allow read, write: if isGroupMember();
       }

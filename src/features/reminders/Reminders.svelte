@@ -41,18 +41,30 @@
 
   let myGroupIds = $derived($myGroups.map((g) => g.id));
 
+  // One subcollection listener per group rather than a single cross-group
+  // query — group reminders live at groups/{groupId}/reminders specifically
+  // so their security rule can check membership using the group id from the
+  // document's PATH (see firestore.rules); that only works one group's
+  // subcollection at a time, not via a top-level `where('groupId', 'in', …)`
+  // query, which is exactly the shape that turned out to be unprovable-safe
+  // and came back permission-denied for every reminder, not just group ones.
   $effect(() => {
     const ids = myGroupIds;
     if (ids.length === 0) {
       groupReminders = [];
       return;
     }
-    // Firestore 'in' caps at 30 values — comfortably above any realistic
-    // number of groups for a household app.
-    const unsub = onSnapshot(query(collection(db, 'reminders'), where('groupId', 'in', ids)), (snap) => {
-      groupReminders = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Reminder, 'id'>) }));
-    });
-    return unsub;
+    const byGroupId = new Map<string, Reminder[]>();
+    const unsubs = ids.map((groupId) =>
+      onSnapshot(collection(db, 'groups', groupId, 'reminders'), (snap) => {
+        byGroupId.set(
+          groupId,
+          snap.docs.map((d) => ({ id: d.id, groupId, ...(d.data() as Omit<Reminder, 'id' | 'groupId'>) })),
+        );
+        groupReminders = [...byGroupId.values()].flat();
+      }),
+    );
+    return () => unsubs.forEach((u) => u());
   });
 
   let personalReminders = $derived.by(() => {
@@ -82,8 +94,27 @@
     return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
   }
 
+  // A reminder created via the WhatsApp ?reminder(WHEN, REPEAT) command
+  // stores a fixed-duration repeat (periodSeconds, e.g. "7d") rather than the
+  // app picker's calendar-based periodUnit/periodAmount — see the Reminder
+  // type for why those are mutually exclusive.
+  function formatDurationSeconds(totalSeconds: number): string {
+    const units: [string, number][] = [['d', 86400], ['h', 3600], ['m', 60], ['s', 1]];
+    const parts: string[] = [];
+    let remaining = totalSeconds;
+    for (const [label, size] of units) {
+      const count = Math.floor(remaining / size);
+      if (count > 0) {
+        parts.push(`${count}${label}`);
+        remaining -= count * size;
+      }
+    }
+    return parts.length > 0 ? parts.join(' ') : '0s';
+  }
+
   function periodLabel(r: Reminder): string {
     if (r.scheduleType !== 'recurring') return '';
+    if (r.periodSeconds) return $t('reminders.everyDuration', { duration: formatDurationSeconds(r.periodSeconds) });
     const amount = r.periodAmount ?? 1;
     const unit = $t(`reminders.unit.${r.periodUnit ?? 'day'}`);
     return amount === 1 ? $t('reminders.everyOne', { unit }) : $t('reminders.everyN', { amount, unit });
@@ -135,7 +166,8 @@
     }
     saving = true;
     try {
-      await addDoc(collection(db, 'reminders'), {
+      const target = newScope === 'group' ? collection(db, 'groups', newGroupId, 'reminders') : collection(db, 'reminders');
+      await addDoc(target, {
         ownerUid: $currentUser.uid,
         scope: newScope,
         ...(newScope === 'group' ? { groupId: newGroupId } : {}),
@@ -156,8 +188,14 @@
     }
   }
 
+  // Personal reminders live at reminders/{id}; group ones at
+  // groups/{groupId}/reminders/{id} — see firestore.rules for why.
+  function reminderRef(r: Reminder) {
+    return r.groupId ? doc(db, 'groups', r.groupId, 'reminders', r.id) : doc(db, 'reminders', r.id);
+  }
+
   async function togglePause(r: Reminder) {
-    await updateDoc(doc(db, 'reminders', r.id), { status: r.status === 'paused' ? 'active' : 'paused' });
+    await updateDoc(reminderRef(r), { status: r.status === 'paused' ? 'active' : 'paused' });
   }
 
   async function snoozeOneDay(r: Reminder) {
@@ -168,12 +206,12 @@
     const dd = String(d.getDate()).padStart(2, '0');
     const hh = String(d.getHours()).padStart(2, '0');
     const mi = String(d.getMinutes()).padStart(2, '0');
-    await updateDoc(doc(db, 'reminders', r.id), { nextTriggerAt: `${yyyy}-${mm}-${dd}T${hh}:${mi}` });
+    await updateDoc(reminderRef(r), { nextTriggerAt: `${yyyy}-${mm}-${dd}T${hh}:${mi}` });
   }
 
   async function removeReminder(r: Reminder) {
     if (!confirm($t('reminders.deleteConfirm'))) return;
-    await deleteDoc(doc(db, 'reminders', r.id));
+    await deleteDoc(reminderRef(r));
   }
 </script>
 

@@ -172,25 +172,32 @@ export interface Debt {
   whatsappMessageId?: string | null;
 }
 
-// reminders/{id} — top-level (not nested under a group) since a personal
-// reminder isn't tied to any group at all. A group-scoped one is delivered to
-// that group's linked WhatsApp expense chat (whatsappIntegrations), reusing
-// that link rather than adding a second chat-picker; a personal one is
-// delivered as a WhatsApp DM to targetUid's own linked WhatsApp account,
-// resolved from any group's senderMap that happens to mention them (see the
-// bot's findWhatsAppJidForUid) — there's no separate "link your WhatsApp"
-// step, it's inferred from having ever been mapped as an expense sender.
+// reminders/{id} — PERSONAL reminders only (a DM to targetUid's own linked
+// WhatsApp account, resolved from any group's senderMap that happens to
+// mention them — see the bot's findWhatsAppJidForUid; no separate "link your
+// WhatsApp" step). Group-scoped reminders instead live at
+// groups/{groupId}/reminders — kept out of this collection specifically so
+// their group-membership check in firestore.rules can use the group id from
+// the document's PATH rather than a field on it (a flat collection with a
+// `groupId` field turned out to make every list query here come back
+// permission-denied — Firestore can only prove a list query safe when any
+// get() calls in the rule resolve from the path/query itself).
 export interface Reminder {
   id: string;
   ownerUid: string;
   scope: 'personal' | 'group';
-  groupId?: string;
+  groupId?: string; // set on group-scoped reminders even though it's also implied by their subcollection path — keeps the bot's collectionGroup-query handling simple
   targetUid?: string; // personal only; defaults to ownerUid when unset
   text: string;
   scheduleType: 'once' | 'recurring';
   nextTriggerAt: string; // ISO datetime, local time (no timezone conversion — see bot's reminderScheduler.ts)
+  // Calendar-based repeat (periodUnit/periodAmount, set by the app's own
+  // picker) and fixed-duration repeat (periodSeconds, set by the WhatsApp
+  // `?reminder(WHEN, REPEAT)` freeflow syntax, e.g. "7d") are mutually
+  // exclusive ways to express a recurring schedule.
   periodUnit?: 'day' | 'week' | 'month';
   periodAmount?: number;
+  periodSeconds?: number;
   status: 'active' | 'paused' | 'done';
   createdAt: number;
   lastSentAt?: number | null;

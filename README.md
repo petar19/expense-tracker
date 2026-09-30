@@ -16,10 +16,10 @@ Site-wide settings (who's allowed to sign in, running a one-off WhatsApp-export 
 
 ## Reminders
 
-Not tied to a group's capability checklist, since a personal reminder isn't tied to a group at all — the **Reminders** tab is always visible and covers two kinds:
+Not tied to a group's capability checklist, since a personal reminder isn't tied to a group at all — the **Reminders** tab is always visible and covers two kinds, from the app or from WhatsApp itself (`?reminder(WHEN[, REPEAT]) text` — see the bot repo for the syntax):
 
-- **Personal**: a one-off or recurring nudge DMed to you (or someone else in a household group, if you set one for them) over WhatsApp — see the bot repo for how it resolves who to DM.
-- **Group**: shared, visible/manageable by any member, delivered to that group's linked WhatsApp chat.
+- **Personal** (`reminders/{id}`): a one-off or recurring nudge DMed to you (or someone else in a household group, if you set one for them) over WhatsApp.
+- **Group** (`groups/{groupId}/reminders/{id}`): shared, visible/manageable by any member, delivered to that group's linked WhatsApp chat. Deliberately a *separate* collection from personal reminders rather than one flat collection with a `groupId` field — Firestore can only verify a list query (which is what the Reminders tab runs) is safe when the security rule's checks come from the query/path itself, and a group-membership check needs the group id from the document's path for that to work. Getting this wrong the first time meant every reminder was invisible in its own list until the moment it fired, then appeared to vanish again — see the bot repo's README for the full story.
 
 Once you're on WhatsApp, you can also react to a reminder (an ack — doesn't change its schedule) or reply **`postpone N`** to push it out N days. The **Shopping list** capability builds directly on this: a recurring item schedules its own reminder rather than the bot needing to know anything about shopping lists specifically.
 

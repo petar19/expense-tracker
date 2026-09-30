@@ -81,18 +81,25 @@
     due.setDate(due.getDate() + Math.max(item.restockIntervalDays - 2, 0));
     const nextTriggerAt = `${toIso(due)}T18:00`;
 
+    // Group reminders live at groups/{groupId}/reminders, not a top-level
+    // collection — see firestore.rules for why (the group-membership check
+    // needs the group id from the document's path, not a field on it).
     let reminderId = item.reminderId;
     let reminderOk = false;
     if (reminderId) {
       try {
-        await updateDoc(doc(db, 'reminders', reminderId), { nextTriggerAt, status: 'active', scheduleType: 'once' });
+        await updateDoc(doc(db, 'groups', $activeGroup.id, 'reminders', reminderId), {
+          nextTriggerAt,
+          status: 'active',
+          scheduleType: 'once',
+        });
         reminderOk = true;
       } catch {
         reminderOk = false; // the linked reminder was deleted directly — recreate it below
       }
     }
     if (!reminderOk) {
-      const ref = await addDoc(collection(db, 'reminders'), {
+      const ref = await addDoc(collection(db, 'groups', $activeGroup.id, 'reminders'), {
         ownerUid: $currentUser.uid,
         scope: 'group',
         groupId: $activeGroup.id,
